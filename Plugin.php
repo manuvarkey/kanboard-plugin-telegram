@@ -3,6 +3,7 @@
 namespace Kanboard\Plugin\Telegram;
 
 require_once __DIR__.'/vendor/autoload.php';
+require_once __DIR__.'/Console/TelegramCommand.php';
 
 use Kanboard\Core\Translator;
 use Kanboard\Core\Plugin\Base;
@@ -23,6 +24,8 @@ class Plugin extends Base
 
         $this->userNotificationTypeModel->setType('telegram', t('Telegram'), '\Kanboard\Plugin\Telegram\Notification\Telegram');
         $this->projectNotificationTypeModel->setType('telegram', t('Telegram'), '\Kanboard\Plugin\Telegram\Notification\Telegram');
+
+        $this->cli->add(new TelegramCommand($this->container));
     }
 
     public function onStartup()
