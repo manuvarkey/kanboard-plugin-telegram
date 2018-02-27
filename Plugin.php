@@ -57,4 +57,14 @@ class Plugin extends Base
     {
         return '>=1.0.37';
     }
+
+    public function getClasses()
+    {
+        return array(
+            'Kanboard\Plugin\Telegram' => array(
+                'UserMetadataModelTelegram',
+                'TelegramCommand'
+            )
+        );
+    }
 }
