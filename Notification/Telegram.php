@@ -212,23 +212,9 @@ class Telegram extends Base implements NotificationInterface
             $telegram = new TelegramClass($apikey, $bot_username);
 
             // Message pay load
-            //$data = array('chat_id' => $chat_id, 'text' => $message, 'parse_mode' => 'HTML');
-            
-            // Send message
-            //$result = Request::sendMessage($data);
-
-            /*$inline_button1 = array("text"=>"Google url","url"=>"http://google.com");
-            $inline_button2 = array("text"=>"work plz","callback_data"=>'/plz');
-            $inline_keyboard = [[$inline_button1,$inline_button2]];
-            $replyMarkup=array("inline_keyboard"=>$inline_keyboard);*/
-            $key="popopo";
-
-        
             $replyMarkup = new InlineKeyboard($keyboard_buttons);
-            //~ $replyMarkup->setResizeKeyboard(true);
-            //~ $replyMarkup->callback_data('/plz');
-            
-            $data = array('chat_id' => '309711130', 'text' => $message, 'parse_mode' => 'HTML','reply_markup' => $replyMarkup);
+            $data = array('chat_id' => $chat_id, 'text' => $message, 'parse_mode' => 'HTML','reply_markup' => $replyMarkup);
+
             $result = Request::sendMessage($data);
 
             // Send any attachment if exists
