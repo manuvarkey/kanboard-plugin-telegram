@@ -47,6 +47,11 @@ function clean($string)
 
 class Telegram extends Base implements NotificationInterface
 {
+    const SUBTASK_CLOSE = "subtask_close";
+    const SUBTASK_INPROGRESS = "subtask_inprogress";
+    const SUBTASK_INPROGRESS_WITH_TIMER = "subtask_inprogress_timer";
+    const SUBTASK_START_TIMER = "subtask_start_timer";
+    const SUBTASK_STOP_TIMER = "subtask_stop_timer";
     /**
      * Send notification to a user
      *
@@ -165,16 +170,33 @@ class Telegram extends Base implements NotificationInterface
                 $subtask_symbol = '[ ] ';
                 $keyboard_buttons[] =new InlineKeyboardButton([
                   'text'          => t("Work on SubTask"),
-                  'callback_data' => "work/".$project['id']."/".$eventData['task']['id']."/".$eventData['subtask']['id'],
+                  'callback_data' => self::SUBTASK_INPROGRESS."/".$eventData['subtask']['id'],
                 ]);
+                if( ! $this->subtaskTimeTrackingModel->hasTimer($eventData['subtask']['id'], $eventData['subtask']['user_id'])){
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("Work on SubTask timer"),
+                    'callback_data' => self::SUBTASK_INPROGRESS_WITH_TIMER."/".$eventData['subtask']['id'],
+                  ]);
+                }
             }
             elseif ($subtask_status == SubtaskModel::STATUS_INPROGRESS)
             {
                 $subtask_symbol = '[~] ';
                 $keyboard_buttons[] =new InlineKeyboardButton([
                   'text'          => t("Close SubTask"),
-                  'callback_data' => "close/".$project['id']."/".$eventData['task']['id']."/".$eventData['subtask']['id'],
+                  'callback_data' => self::SUBTASK_CLOSE."/".$eventData['subtask']['id'],
                 ]);
+                if( ! $this->subtaskTimeTrackingModel->hasTimer($eventData['subtask']['id'], $eventData['subtask']['user_id'])){
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("start"),
+                    'callback_data' => self::SUBTASK_START_TIMER."/".$eventData['subtask']['id'],
+                  ]);
+                }else{
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("start"),
+                    'callback_data' => self::SUBTASK_STOP_TIMER."/".$eventData['subtask']['id'],
+                  ]);
+                }
             }
             
             $message .= "\n<b>  ↳ ".$subtask_symbol.'</b> <em>"'.htmlspecialchars($eventData['subtask']['title'], ENT_NOQUOTES | ENT_IGNORE).'"</em>';

@@ -1,6 +1,6 @@
 <?php
 
-namespace Kanboard\Plugin\Telegram;
+namespace Kanboard\Plugin\Telegram\Console;
 
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -13,10 +13,15 @@ use Kanboard\Core\Base;
 use Kanboard\Console\BaseCommand;
 use Kanboard\Model\UserMetadataModel;
 use Kanboard\Model\SubtaskModel;
+use Kanboard\Model\SubtaskTimeTrackingModel;
 
 use Longman\TelegramBot\Request;
 use Longman\TelegramBot\Telegram as TelegramClass;
 use Longman\TelegramBot\Exception\TelegramException;
+use Longman\TelegramBot\Entities\InlineKeyboardButton;
+use Longman\TelegramBot\Entities\InlineKeyboard;
+
+use Kanboard\Plugin\Telegram\Notification\Telegram;
 
 /*class UserMetadataModelTelegram extends UserMetadataModel
 {
@@ -41,25 +46,74 @@ class TelegramCommand extends BaseCommand
     }
 
     private function processCallbackQuery($chat_id, $message, $data){
-              
-          //ok
-          
+
+        $keyboard_buttons = array();
+        
           foreach($this->getAllUsersByTelegramChatId($chat_id) as $user){
-            $this->output->writeln("user_id=".$user['id']." ");
-            $tcmd = explode('/',$data);
-            if(count($tcmd)>2){
-              switch($tcmd[0]){
-                case 'close':
-                  $this->output->writeln("got close subtask=".$tcmd[3]." ");
-                  $this->subtaskModel->update(array('id'=>$tcmd[3],'status'=>SubtaskModel::STATUS_DONE));
-                  break;
-                case 'work':
-                  $this->output->writeln("got work subtask=".$tcmd[3]." ");
-                  $this->subtaskModel->update(array('id'=>$tcmd[3],'status'=>SubtaskModel::STATUS_INPROGRESS));
-                  break;
-              }
+            $this->output->writeln("user_id=".$user['id']." ".$data);
+            list($tcmd,$arg) = explode('/',$data);
+            
+            switch($tcmd){
+              case Telegram::SUBTASK_CLOSE:
+                $subtask = $this->subtaskModel->getById($arg);
+                $this->output->writeln("got close subtask=");//.print_r($subtask,true)." ");
+                if($subtask['user_id'] == 0  || $subtask['user_id'] == $user['id']){
+                  //~ $this->subtaskModel->update(array('id'=>$arg,'status'=>SubtaskModel::STATUS_DONE));
+                  $status = $this->subtaskStatusModel->toggleStatus($subtask['id']);
+                  $this->subtaskTimeTrackingModel->toggleTimer($subtask['id'], $user['id'],$status);
+                  $this->subtaskTimeTrackingModel->updateTaskTimeTracking($subtask['task_id']);
+                }
+                break;
+              case Telegram::SUBTASK_INPROGRESS:
+              case Telegram::SUBTASK_INPROGRESS_WITH_TIMER:
+                $subtask = $this->subtaskModel->getById($arg);
+                $this->output->writeln("got INPROGRESS subtask=");//.print_r($subtask,true));
+                if($subtask['user_id'] == 0 || $subtask['user_id'] == $user['id']){
+                  //~ $this->subtaskModel->update(array('id'=>$subtask['id'],'status'=>SubtaskModel::STATUS_INPROGRESS,'user_id'=>$user['id']));
+                  if($tcmd == Telegram::SUBTASK_INPROGRESS_WITH_TIMER){
+                      //~ $this->subtaskTimeTrackingModel->logStartTime($subtask['id'], $user['id']);
+                      $this->subtaskTimeTrackingModel->toggleTimer($subtask['id'], $user['id'],$status);
+                  }
+                  $status = $this->subtaskStatusModel->toggleStatus($subtask['id']);
+                }
+                break;
+              case Telegram::SUBTASK_START_TIMER:
+                $subtask = $this->subtaskModel->getById($arg);
+                $this->output->writeln("got SUBTASK_START_TIMER subtask=");//.print_r($subtask,true));
+                if($subtask['user_id'] == 0 || $subtask['user_id'] == $user['id']){
+                  $this->subtaskTimeTrackingModel->logStartTime($subtask['id'], $user['id']);
+
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("Close SubTask"),
+                    'callback_data' => Telegram::SUBTASK_CLOSE."/".$subtask['id'],
+                  ]);
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("stop"),
+                    'callback_data' => Telegram::SUBTASK_STOP_TIMER."/".$subtask['id'],
+                  ]);
+                }
+                break;
+              case Telegram::SUBTASK_STOP_TIMER:
+                $subtask = $this->subtaskModel->getById($arg);
+                $this->output->writeln("got SUBTASK_STOP_TIMER subtask=");//.print_r($subtask,true));
+                if($subtask['user_id'] == 0 || $subtask['user_id'] == $user['id']){
+                  $this->subtaskTimeTrackingModel->logEndTime($subtask['id'], $user['id']);
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("Close SubTask"),
+                    'callback_data' => Telegram::SUBTASK_CLOSE."/".$subtask['id'],
+                  ]);
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("start"),
+                    'callback_data' => Telegram::SUBTASK_START_TIMER."/".$subtask['id'],
+                  ]);
+                }
+                break;
             }
           }
+          if(count($keyboard_buttons)>0){
+            return new InlineKeyboard($keyboard_buttons);
+          }
+          return false;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -111,15 +165,26 @@ class TelegramCommand extends BaseCommand
                 $q = $result->getCallbackQuery();
                 $data = $q->getData();
                 //$chat_id = $q->getId();
-                $chat_id        = $q->getFrom()->getId();
+                $chat_id        = $q->getMessage()->getChat()->getId();
+                $from_id        = $q->getFrom()->getId();
                 $query_id       = $q->getId();
+                $message_id     = $q->getMessage()->getMessageId();
 
                 $message = trim($q->getText());
-                $output->writeln("new getCallbackQuery '$message' from '$chat_id'".print_r($data,true));
+                $output->writeln("new getCallbackQuery '$message' from '$from_id' in '$chat_id'");//.print_r($q->getMessage()->getChat(),true));
 
-                $this->processCallbackQuery($chat_id,$message,$data);
                 
-                Request::answerCallbackQuery(['callback_query_id' => $query_id]);
+                $replyMarkup = $this->processCallbackQuery($from_id,$message,$data);
+                if($replyMarkup !== false){
+                  $answer['chat_id'] = $chat_id;
+                  $answer['message_id'] = $message_id;
+                  $answer['reply_markup'] = $replyMarkup;
+                  //$output->writeln("new answer ".print_r($answer,true));
+                  Request::editMessageReplyMarkup($answer);
+                }else{
+                  $answer['callback_query_id'] = $query_id;
+                  Request::answerCallbackQuery($answer);
+                }
                }
             }
           }else{

@@ -3,10 +3,10 @@
 namespace Kanboard\Plugin\Telegram;
 
 require_once __DIR__.'/vendor/autoload.php';
-require_once __DIR__.'/Console/TelegramCommand.php';
 
 use Kanboard\Core\Translator;
 use Kanboard\Core\Plugin\Base;
+use Kanboard\Plugin\Telegram\Console\TelegramCommand;
 
 /**
  * Telegram Plugin
@@ -62,7 +62,6 @@ class Plugin extends Base
     {
         return array(
             'Kanboard\Plugin\Telegram' => array(
-                'UserMetadataModelTelegram',
                 'TelegramCommand'
             )
         );
