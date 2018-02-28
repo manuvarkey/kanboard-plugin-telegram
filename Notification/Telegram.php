@@ -177,6 +177,11 @@ class Telegram extends Base implements NotificationInterface
                     'text'          => t("Work on SubTask timer"),
                     'callback_data' => self::SUBTASK_INPROGRESS_WITH_TIMER."/".$eventData['subtask']['id'],
                   ]);
+                }else{
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("stop"),
+                    'callback_data' => self::SUBTASK_STOP_TIMER."/".$eventData['subtask']['id'],
+                  ]);
                 }
             }
             elseif ($subtask_status == SubtaskModel::STATUS_INPROGRESS)
@@ -186,6 +191,7 @@ class Telegram extends Base implements NotificationInterface
                   'text'          => t("Close SubTask"),
                   'callback_data' => self::SUBTASK_CLOSE."/".$eventData['subtask']['id'],
                 ]);
+                
                 if( ! $this->subtaskTimeTrackingModel->hasTimer($eventData['subtask']['id'], $eventData['subtask']['user_id'])){
                   $keyboard_buttons[] =new InlineKeyboardButton([
                     'text'          => t("start"),
@@ -193,7 +199,7 @@ class Telegram extends Base implements NotificationInterface
                   ]);
                 }else{
                   $keyboard_buttons[] =new InlineKeyboardButton([
-                    'text'          => t("start"),
+                    'text'          => t("stop"),
                     'callback_data' => self::SUBTASK_STOP_TIMER."/".$eventData['subtask']['id'],
                   ]);
                 }

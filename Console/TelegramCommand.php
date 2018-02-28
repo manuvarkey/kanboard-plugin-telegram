@@ -72,6 +72,7 @@ class TelegramCommand extends BaseCommand
                   //~ $this->subtaskModel->update(array('id'=>$subtask['id'],'status'=>SubtaskModel::STATUS_INPROGRESS,'user_id'=>$user['id']));
                   if($tcmd == Telegram::SUBTASK_INPROGRESS_WITH_TIMER){
                       //~ $this->subtaskTimeTrackingModel->logStartTime($subtask['id'], $user['id']);
+                      $status = ($subtask['status'] + 1) % 3;//from app/Model/SubtaskStatusModel.php
                       $this->subtaskTimeTrackingModel->toggleTimer($subtask['id'], $user['id'],$status);
                   }
                   $status = $this->subtaskStatusModel->toggleStatus($subtask['id']);
