@@ -7,8 +7,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 //use Kanboard\Console;
 use Pimple\Container;
 use Symfony\Component\Console\Command\Command;
+
+use Kanboard\Core\Base;
 use Kanboard\Console\BaseCommand;
 use Kanboard\Model\UserMetadataModel;
+use Kanboard\Model\SubtaskModel;
 
 use Longman\TelegramBot\Request;
 use Longman\TelegramBot\Telegram as TelegramClass;
@@ -22,8 +25,6 @@ use Longman\TelegramBot\Exception\TelegramException;
 /**
  * Class TelegramCommand
  *
- * @package Kanboard\Console
- * @author  Frederic Guillot
  */
 class TelegramCommand extends BaseCommand
 {
@@ -43,13 +44,26 @@ class TelegramCommand extends BaseCommand
         $bot_username = $this->configModel->get('telegram_username');
         $offset = 0+$this->configModel->get('telegram_offset');
         
-        list($offset, $chat_id, $message) = $this->process_commands($apikey, $bot_username, $offset,$output);
+        list($offset, $chat_id, $message, $data) = $this->process_commands($apikey, $bot_username, $offset,$output);
         
         if($offset != 0){
           //ok
           $this->configModel->save( array('telegram_offset' => $offset) );
           foreach($this->getAllUsersByTelegramChatId($chat_id) as $user){
             $output->writeln("user_id=".$user['id']." ");
+            $tcmd = explode('/',$data);
+            if(count($tcmd)>2){
+              switch($tcmd[0]){
+                case 'close':
+                  $output->writeln("got close subtask=".$tcmd[3]." ");
+                  $this->subtaskModel->update(array('id'=>$tcmd[3],'status'=>SubtaskModel::STATUS_DONE));
+                  break;
+                case 'work':
+                  $output->writeln("got work subtask=".$tcmd[3]." ");
+                  $this->subtaskModel->update(array('id'=>$tcmd[3],'status'=>SubtaskModel::STATUS_INPROGRESS));
+                  break;
+              }
+            }
           }
         }else{
           //error
@@ -76,10 +90,12 @@ class TelegramCommand extends BaseCommand
 
         $chat_id="";
         $message="";
+        $data = "";
 
         if ($response->isOk()) {
           //Process all updates
           /** @var Update $result */
+          //~ $output->writeln("new getCallbackQuery".print_r($response->getResult(),true));
           foreach ((array) $response->getResult() as $result) {
             $offset = $result->getUpdateId();
             
@@ -87,6 +103,15 @@ class TelegramCommand extends BaseCommand
               $chat_id = $result->getMessage()->getChat()->getId();
               $message = trim($result->getMessage()->getText());
               $output->writeln("new message '$message' from '$chat_id'");
+             }elseif($result->getCallbackQuery() != NULL){
+              $q = $result->getCallbackQuery();
+              $data = $q->getData();
+              //$chat_id = $q->getId();
+              $chat_id        = $q->getFrom()->getId();
+              $query_id       = $q->getId();
+
+              $message = trim($q->getText());
+              $output->writeln("new getCallbackQuery '$message' from '$chat_id'".print_r($data,true));
              }
           }
         }else{
@@ -101,7 +126,7 @@ class TelegramCommand extends BaseCommand
         return 0;//$this->response->redirect($this->helper->url->to('UserViewController', 'integrations', array('user_id' => $user['id'] )), true);
       }
 
-      return array($offset, $chat_id, $message);
+      return array($offset, $chat_id, $message,$data);
     }
 
     public function getAllUsersByTelegramChatId($chat_id){

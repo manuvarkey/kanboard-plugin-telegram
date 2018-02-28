@@ -5,6 +5,9 @@ namespace Kanboard\Plugin\Telegram\Notification;
 use Longman\TelegramBot\Request;
 use Longman\TelegramBot\Telegram as TelegramClass;
 use Longman\TelegramBot\Exception\TelegramException;
+use Longman\TelegramBot\Entities\InlineKeyboardButton;
+use Longman\TelegramBot\Entities\InlineKeyboard;
+
 use Kanboard\Core\Base;
 use Kanboard\Core\Notification\NotificationInterface;
 use Kanboard\Model\TaskModel;
@@ -110,6 +113,7 @@ class Telegram extends Base implements NotificationInterface
     {
     
         // Get required data
+        $keyboard_buttons = array();
         
         if ($this->userSession->isLogged()) 
         {
@@ -159,10 +163,18 @@ class Telegram extends Base implements NotificationInterface
             elseif ($subtask_status == SubtaskModel::STATUS_TODO)
             {
                 $subtask_symbol = '[ ] ';
+                $keyboard_buttons[] =new InlineKeyboardButton([
+                  'text'          => t("Work on SubTask"),
+                  'callback_data' => "work/".$project['id']."/".$eventData['task']['id']."/".$eventData['subtask']['id'],
+                ]);
             }
             elseif ($subtask_status == SubtaskModel::STATUS_INPROGRESS)
             {
                 $subtask_symbol = '[~] ';
+                $keyboard_buttons[] =new InlineKeyboardButton([
+                  'text'          => t("Close SubTask"),
+                  'callback_data' => "close/".$project['id']."/".$eventData['task']['id']."/".$eventData['subtask']['id'],
+                ]);
             }
             
             $message .= "\n<b>  ↳ ".$subtask_symbol.'</b> <em>"'.htmlspecialchars($eventData['subtask']['title'], ENT_NOQUOTES | ENT_IGNORE).'"</em>';
@@ -200,11 +212,25 @@ class Telegram extends Base implements NotificationInterface
             $telegram = new TelegramClass($apikey, $bot_username);
 
             // Message pay load
-            $data = array('chat_id' => $chat_id, 'text' => $message, 'parse_mode' => 'HTML');
+            //$data = array('chat_id' => $chat_id, 'text' => $message, 'parse_mode' => 'HTML');
             
             // Send message
-            $result = Request::sendMessage($data);
+            //$result = Request::sendMessage($data);
+
+            /*$inline_button1 = array("text"=>"Google url","url"=>"http://google.com");
+            $inline_button2 = array("text"=>"work plz","callback_data"=>'/plz');
+            $inline_keyboard = [[$inline_button1,$inline_button2]];
+            $replyMarkup=array("inline_keyboard"=>$inline_keyboard);*/
+            $key="popopo";
+
+        
+            $replyMarkup = new InlineKeyboard($keyboard_buttons);
+            //~ $replyMarkup->setResizeKeyboard(true);
+            //~ $replyMarkup->callback_data('/plz');
             
+            $data = array('chat_id' => '309711130', 'text' => $message, 'parse_mode' => 'HTML','reply_markup' => $replyMarkup);
+            $result = Request::sendMessage($data);
+
             // Send any attachment if exists
             if ($attachment != '')
             {
