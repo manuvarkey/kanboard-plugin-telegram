@@ -52,6 +52,7 @@ class Telegram extends Base implements NotificationInterface
     const SUBTASK_INPROGRESS_WITH_TIMER = "subtask_inprogress_timer";
     const SUBTASK_START_TIMER = "subtask_start_timer";
     const SUBTASK_STOP_TIMER = "subtask_stop_timer";
+    const TASK_COMMENT = "comment";
     /**
      * Send notification to a user
      *

@@ -109,6 +109,14 @@ class TelegramCommand extends BaseCommand
                   ]);
                 }
                 break;
+              case Telegram::TASK_COMMENT:
+                $task = $this->taskFinderModel->getById($arg);
+                $this->commentModel->create(array(
+                'comment' => $message,
+                'user_id' => $user['id'],
+                'task_id' => $task['id']
+                ));
+                break;
             }
           }
           if(count($keyboard_buttons)>0){
@@ -157,11 +165,44 @@ class TelegramCommand extends BaseCommand
             foreach ((array) $response->getResult() as $result) {
               $offset = $result->getUpdateId();
               $this->configModel->save( array('telegram_offset' => $offset) );
+              //~ $output->writeln("new message ".print_r($result,true));
               
-              if( $result->getMessage() != NULL){
-                $chat_id = $result->getMessage()->getChat()->getId();
-                $message = trim($result->getMessage()->getText());
-                $output->writeln("new message '$message' from '$chat_id'");
+              $Message = $result->getMessage();
+              if( !isset($Message) ){
+                $Message = $result->getEditedMessage();
+              }
+              if( isset($Message) ){
+                $chat_id = $Message->getChat()->getId();
+                $from_id = $Message->getFrom()->getId();
+                $message = trim($Message->getText());
+                $output->writeln("new message '$message' from '$from_id' in '$chat_id'");//print_r($result,true));
+
+                $data = mb_strstr($message, '@'.$bot_username);
+                if($data !== false){
+                  $data = trim(mb_substr($data,mb_strpos($data, ' ')));
+                  if(mb_strpos($message, ' ')){
+                    list($data,$message) = explode(' ',$data,2);
+                  }else{
+                    $data = $message;//assume command without arguments
+                    $message="";
+                  }
+                }elseif(mb_strpos($message, ' ')){
+                  list($data,$message) = explode(' ',$message,2);
+                }else{
+                  $data = $message;//assume command without arguments
+                  $message="";
+                }
+                $output->writeln("data=$data message=$message");
+
+                // Message pay load
+                $replyMarkup = $this->processCallbackQuery($from_id,$message,$data);
+
+                if($replyMarkup !== false){
+                  $answer = array('chat_id' => $chat_id, 'text' => $message, 'parse_mode' => 'HTML');
+                  $answer['reply_markup'] = $replyMarkup;
+                  $result = Request::sendMessage($data);
+                }
+
                }elseif($result->getCallbackQuery() != NULL){
                 $q = $result->getCallbackQuery();
                 $data = $q->getData();
