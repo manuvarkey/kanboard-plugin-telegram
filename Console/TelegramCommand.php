@@ -175,22 +175,28 @@ class TelegramCommand extends BaseCommand
                 $chat_id = $Message->getChat()->getId();
                 $from_id = $Message->getFrom()->getId();
                 $message = trim($Message->getText());
-                $output->writeln("new message '$message' from '$from_id' in '$chat_id'");//print_r($result,true));
+                $reply2message = $Message->getReplyToMessage();
+                $output->writeln("new message '$message' from '$from_id' in '$chat_id'");//.print_r($reply2message,true));
 
-                $data = mb_strstr($message, '@'.$bot_username);
-                if($data !== false){
-                  $data = trim(mb_substr($data,mb_strpos($data, ' ')));
-                  if(mb_strpos($message, ' ')){
-                    list($data,$message) = explode(' ',$data,2);
+                if($reply2message == NULL){
+                  $data = mb_strstr($message, '@'.$bot_username);
+                  if($data !== false){
+                    $data = trim(mb_substr($data,mb_strpos($data, ' ')));
+                    if(mb_strpos($message, ' ')){
+                      list($data,$message) = explode(' ',$data,2);
+                    }else{
+                      $data = $message;//assume command without arguments
+                      $message="";
+                    }
+                  }elseif(mb_strpos($message, ' ')){
+                    list($data,$message) = explode(' ',$message,2);
                   }else{
                     $data = $message;//assume command without arguments
                     $message="";
                   }
-                }elseif(mb_strpos($message, ' ')){
-                  list($data,$message) = explode(' ',$message,2);
                 }else{
-                  $data = $message;//assume command without arguments
-                  $message="";
+                  $reptest = trim($reply2message->getText());
+                  $data = strtok($reptest, "\r\n");
                 }
                 $output->writeln("data=$data message=$message");
 

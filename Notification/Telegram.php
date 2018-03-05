@@ -219,6 +219,7 @@ class Telegram extends Base implements NotificationInterface
         
         elseif (in_array($eventName, $comment_events))  // If comment available
         {
+			$message = self::TASK_COMMENT."/".$eventData['task']['id']."\n".$message;
             $message .= "\n💬 ".'<em>"'.htmlspecialchars($eventData['comment']['comment'], ENT_NOQUOTES | ENT_IGNORE).'"</em>';
         }
         
