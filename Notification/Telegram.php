@@ -5,6 +5,9 @@ namespace Kanboard\Plugin\Telegram\Notification;
 use Longman\TelegramBot\Request;
 use Longman\TelegramBot\Telegram as TelegramClass;
 use Longman\TelegramBot\Exception\TelegramException;
+use Longman\TelegramBot\Entities\InlineKeyboardButton;
+use Longman\TelegramBot\Entities\InlineKeyboard;
+
 use Kanboard\Core\Base;
 use Kanboard\Core\Notification\NotificationInterface;
 use Kanboard\Model\TaskModel;
@@ -44,6 +47,12 @@ function clean($string)
 
 class Telegram extends Base implements NotificationInterface
 {
+    const SUBTASK_CLOSE = "subtask_close";
+    const SUBTASK_INPROGRESS = "subtask_inprogress";
+    const SUBTASK_INPROGRESS_WITH_TIMER = "subtask_inprogress_timer";
+    const SUBTASK_START_TIMER = "subtask_start_timer";
+    const SUBTASK_STOP_TIMER = "subtask_stop_timer";
+    const TASK_COMMENT = "comment";
     /**
      * Send notification to a user
      *
@@ -110,6 +119,7 @@ class Telegram extends Base implements NotificationInterface
     {
     
         // Get required data
+        $keyboard_buttons = array();
         
         if ($this->userSession->isLogged()) 
         {
@@ -159,10 +169,41 @@ class Telegram extends Base implements NotificationInterface
             elseif ($subtask_status == SubtaskModel::STATUS_TODO)
             {
                 $subtask_symbol = '[ ] ';
+                $keyboard_buttons[] =new InlineKeyboardButton([
+                  'text'          => t("Work on SubTask"),
+                  'callback_data' => self::SUBTASK_INPROGRESS."/".$eventData['subtask']['id'],
+                ]);
+                if( ! $this->subtaskTimeTrackingModel->hasTimer($eventData['subtask']['id'], $eventData['subtask']['user_id'])){
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("Work on SubTask timer"),
+                    'callback_data' => self::SUBTASK_INPROGRESS_WITH_TIMER."/".$eventData['subtask']['id'],
+                  ]);
+                }else{
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("stop"),
+                    'callback_data' => self::SUBTASK_STOP_TIMER."/".$eventData['subtask']['id'],
+                  ]);
+                }
             }
             elseif ($subtask_status == SubtaskModel::STATUS_INPROGRESS)
             {
                 $subtask_symbol = '[~] ';
+                $keyboard_buttons[] =new InlineKeyboardButton([
+                  'text'          => t("Close SubTask"),
+                  'callback_data' => self::SUBTASK_CLOSE."/".$eventData['subtask']['id'],
+                ]);
+                
+                if( ! $this->subtaskTimeTrackingModel->hasTimer($eventData['subtask']['id'], $eventData['subtask']['user_id'])){
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("start"),
+                    'callback_data' => self::SUBTASK_START_TIMER."/".$eventData['subtask']['id'],
+                  ]);
+                }else{
+                  $keyboard_buttons[] =new InlineKeyboardButton([
+                    'text'          => t("stop"),
+                    'callback_data' => self::SUBTASK_STOP_TIMER."/".$eventData['subtask']['id'],
+                  ]);
+                }
             }
             
             $message .= "\n<b>  ↳ ".$subtask_symbol.'</b> <em>"'.htmlspecialchars($eventData['subtask']['title'], ENT_NOQUOTES | ENT_IGNORE).'"</em>';
@@ -178,6 +219,7 @@ class Telegram extends Base implements NotificationInterface
         
         elseif (in_array($eventName, $comment_events))  // If comment available
         {
+			$message = self::TASK_COMMENT."/".$eventData['task']['id']."\n".$message;
             $message .= "\n💬 ".'<em>"'.htmlspecialchars($eventData['comment']['comment'], ENT_NOQUOTES | ENT_IGNORE).'"</em>';
         }
         
@@ -200,11 +242,11 @@ class Telegram extends Base implements NotificationInterface
             $telegram = new TelegramClass($apikey, $bot_username);
 
             // Message pay load
-            $data = array('chat_id' => $chat_id, 'text' => $message, 'parse_mode' => 'HTML');
-            
-            // Send message
+            $replyMarkup = new InlineKeyboard($keyboard_buttons);
+            $data = array('chat_id' => $chat_id, 'text' => $message, 'parse_mode' => 'HTML','reply_markup' => $replyMarkup);
+
             $result = Request::sendMessage($data);
-            
+
             // Send any attachment if exists
             if ($attachment != '')
             {
