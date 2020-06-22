@@ -17,6 +17,14 @@ class TelegramController extends BaseController
         //$this->checkCSRFParam();
         $apikey = $this->userMetadataModel->get($user['id'], 'telegram_apikey', $this->configModel->get('telegram_apikey'));
         $bot_username = $this->userMetadataModel->get($user['id'], 'telegram_username', $this->configModel->get('telegram_username'));
+        try {
+                $offset = 0 + (int)$this->userMetadataModel->get($user['id'], 'telegram_offset', $this->configModel->get('telegram_offset'));
+        } catch (Exception $e) {
+                $offset=0;
+        }  
+        
+        // Preventing "A non-numeric value encountered in /var/www/app/plugins/Telegram/Controller/TelegramController.php"
+
         $offset = 0 + $this->userMetadataModel->get($user['id'], 'telegram_offset', $this->configModel->get('telegram_offset'));
         $private_message = mb_substr(urldecode($this->request->getStringParam('private_message')), 0, 32);
 
