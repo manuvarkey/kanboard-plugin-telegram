@@ -17,15 +17,13 @@ class TelegramController extends BaseController
         //$this->checkCSRFParam();
         $apikey = $this->userMetadataModel->get($user['id'], 'telegram_apikey', $this->configModel->get('telegram_apikey'));
         $bot_username = $this->userMetadataModel->get($user['id'], 'telegram_username', $this->configModel->get('telegram_username'));
+        
+        // Preventing "A non-numeric value encountered in /var/www/app/plugins/Telegram/Controller/TelegramController.php"
         try {
                 $offset = 0 + (int)$this->userMetadataModel->get($user['id'], 'telegram_offset', $this->configModel->get('telegram_offset'));
         } catch (Exception $e) {
                 $offset=0;
         }  
-        
-        // Preventing "A non-numeric value encountered in /var/www/app/plugins/Telegram/Controller/TelegramController.php"
-
-        $offset = 0 + $this->userMetadataModel->get($user['id'], 'telegram_offset', $this->configModel->get('telegram_offset'));
         $private_message = mb_substr(urldecode($this->request->getStringParam('private_message')), 0, 32);
 
         list($offset, $chat_id, $user_name) = $this->get_chat_id($apikey, $bot_username, $offset, $private_message);
@@ -49,7 +47,14 @@ class TelegramController extends BaseController
         //$this->checkCSRFParam();
         $apikey = $this->projectMetadataModel->get($project['id'], 'telegram_apikey', $this->configModel->get('telegram_apikey'));
         $bot_username = $this->projectMetadataModel->get($project['id'], 'telegram_username', $this->configModel->get('telegram_username'));
-        $offset = 0 + $this->projectMetadataModel->get($project['id'], 'telegram_offset', $this->configModel->get('telegram_offset'));
+        
+        // Preventing "A non-numeric value encountered in /var/www/app/plugins/Telegram/Controller/TelegramController.php"
+        try {
+		    $offset = 0 + (int)$this->projectMetadataModel->get($project['id'], 'telegram_offset', $this->configModel->get('telegram_offset'));
+	    } catch (Exception $e) {
+                $offset=0;
+        }  
+
         $private_message = mb_substr(urldecode($this->request->getStringParam('private_message')), 0, 32);
 
         list($offset, $chat_id, $user_name) = $this->get_chat_id($apikey, $bot_username, $offset, $private_message);
