@@ -193,12 +193,20 @@ class Telegram extends Base implements NotificationInterface
             
             // Setup proxy details if set in kanboard configuration
             if (HTTP_PROXY_HOSTNAME != '')
-            {
-                Request::setClient(new \GuzzleHttp\Client([
-                               'base_uri' => 'https://api.telegram.org',
-                               'proxy'    => 'tcp://'.HTTP_PROXY_HOSTNAME.':'.HTTP_PROXY_PORT,
-                               'verify'   => false,
-                             ]));
+	    {
+		    if (HTTP_PROXY_USERNAME != '')
+		    {
+			    $proxy_name = 'tcp://'.HTTP_PROXY_USERNAME.':'.HTTP_PROXY_PASSWORD.'@'.HTTP_PROXY_HOSTNAME.':'.HTTP_PROXY_PORT;
+		    }
+		    else
+		    {
+			    $proxy_name = 'tcp://'.HTTP_PROXY_HOSTNAME.':'.HTTP_PROXY_PORT;
+		    }
+                    Request::setClient(new \GuzzleHttp\Client([
+			    'base_uri' => 'https://api.telegram.org',
+                            'timeout' => 10,
+                            'request.options' => ['proxy'   => $proxy_name],
+                    ]));
             }
 
             // Message pay load
@@ -241,4 +249,3 @@ class Telegram extends Base implements NotificationInterface
         }
     }
 }
-
