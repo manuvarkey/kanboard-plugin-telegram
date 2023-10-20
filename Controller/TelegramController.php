@@ -83,9 +83,27 @@ class TelegramController extends BaseController
 
             // Create Telegram API object
             $telegram = new TelegramClass($apikey, $bot_username);
+            
+            // Setup proxy details if set in kanboard configuration
+            if (HTTP_PROXY_HOSTNAME != '')
+	        {
+	                if (HTTP_PROXY_USERNAME != '')
+	                {
+	                    $proxy_name = 'tcp://'.HTTP_PROXY_USERNAME.':'.HTTP_PROXY_PASSWORD.'@'.HTTP_PROXY_HOSTNAME.':'.HTTP_PROXY_PORT;
+	                }
+	                else
+	                {
+	                    $proxy_name = 'tcp://'.HTTP_PROXY_HOSTNAME.':'.HTTP_PROXY_PORT;
+	                }
+                        Request::setClient(new \GuzzleHttp\Client([
+                    'base_uri' => 'https://api.telegram.org',
+                                'timeout' => 5,
+                                'request.options' => ['proxy'   => $proxy_name],
+                        ]));
+            }
 
             $limit = 100;
-            $timeout = 1;
+            $timeout = 5;
             $response = Request::getUpdates(['offset' => $offset + 1, 'limit' => $limit, 'timeout' => $timeout, ]);
 
             $chat_id = "";
