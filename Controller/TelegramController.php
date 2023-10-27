@@ -17,6 +17,7 @@ class TelegramController extends BaseController
         //$this->checkCSRFParam();
         $apikey = $this->userMetadataModel->get($user['id'], 'telegram_apikey', $this->configModel->get('telegram_apikey'));
         $bot_username = $this->userMetadataModel->get($user['id'], 'telegram_username', $this->configModel->get('telegram_username'));
+        $telegram_proxy = $this->userMetadataModel->get($user['id'], 'telegram_proxy', $this->configModel->get('telegram_proxy'));
         
         // Preventing "A non-numeric value encountered in /var/www/app/plugins/Telegram/Controller/TelegramController.php"
         try {
@@ -26,7 +27,7 @@ class TelegramController extends BaseController
         }  
         $private_message = mb_substr(urldecode($this->request->getStringParam('private_message')), 0, 32);
 
-        list($offset, $chat_id, $user_name) = $this->get_chat_id($apikey, $bot_username, $offset, $private_message);
+        list($offset, $chat_id, $user_name) = $this->get_chat_id($apikey, $bot_username, $telegram_proxy, $offset, $private_message);
 
         if ($offset != 0)
         {
@@ -47,6 +48,7 @@ class TelegramController extends BaseController
         //$this->checkCSRFParam();
         $apikey = $this->projectMetadataModel->get($project['id'], 'telegram_apikey', $this->configModel->get('telegram_apikey'));
         $bot_username = $this->projectMetadataModel->get($project['id'], 'telegram_username', $this->configModel->get('telegram_username'));
+        $telegram_proxy = $this->userMetadataModel->get($project['id'], 'telegram_proxy', $this->configModel->get('telegram_proxy'));
         
         // Preventing "A non-numeric value encountered in /var/www/app/plugins/Telegram/Controller/TelegramController.php"
         try {
@@ -57,7 +59,7 @@ class TelegramController extends BaseController
 
         $private_message = mb_substr(urldecode($this->request->getStringParam('private_message')), 0, 32);
 
-        list($offset, $chat_id, $user_name) = $this->get_chat_id($apikey, $bot_username, $offset, $private_message);
+        list($offset, $chat_id, $user_name) = $this->get_chat_id($apikey, $bot_username, $telegram_proxy, $offset, $private_message);
 
         if ($offset != 0)
         {
@@ -72,7 +74,7 @@ class TelegramController extends BaseController
         }
     }
 
-    private function get_chat_id($apikey, $bot_username, $offset, $private_message)
+    private function get_chat_id($apikey, $bot_username, $telegram_proxy, $offset, $private_message)
     {
         try
         {
@@ -83,9 +85,20 @@ class TelegramController extends BaseController
 
             // Create Telegram API object
             $telegram = new TelegramClass($apikey, $bot_username);
+            
+            // Setup proxy details if set in kanboard configuration
+            if ($telegram_proxy != '')
+	        {
+                Request::setClient(new \GuzzleHttp\Client([
+	                    'base_uri' => 'https://api.telegram.org',
+                        'timeout' => 20,
+                        'verify' => false,
+                        'proxy'   => $telegram_proxy,
+                ]));
+            }
 
             $limit = 100;
-            $timeout = 1;
+            $timeout = 20;
             $response = Request::getUpdates(['offset' => $offset + 1, 'limit' => $limit, 'timeout' => $timeout, ]);
 
             $chat_id = "";
