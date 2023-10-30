@@ -45,6 +45,7 @@ class Telegram extends Base implements NotificationInterface
         $bot_username = $this->userMetadataModel->get($user['id'], 'telegram_username', $this->configModel->get('telegram_username'));
         $chat_id = $this->userMetadataModel->get($user['id'], 'telegram_user_cid');
         $forward_attachments = $this->userMetadataModel->get($user['id'], 'forward_attachments', $this->configModel->get('forward_attachments'));
+        $telegram_proxy = $this->userMetadataModel->get($user['id'], 'telegram_proxy', $this->configModel->get('telegram_proxy'));
         
         if (! empty($apikey)) 
         {
@@ -54,13 +55,13 @@ class Telegram extends Base implements NotificationInterface
                 {
                     $project = $this->projectModel->getById($task['project_id']);
                     $eventData['task'] = $task;
-                    $this->sendMessage($apikey, $bot_username, $forward_attachments, $chat_id, $project, $eventName, $eventData);
+                    $this->sendMessage($apikey, $bot_username, $forward_attachments, $telegram_proxy, $chat_id, $project, $eventName, $eventData);
                 }
             } 
             else 
             {
                 $project = $this->projectModel->getById($eventData['task']['project_id']);
-                $this->sendMessage($apikey, $bot_username, $forward_attachments, $chat_id, $project, $eventName, $eventData);
+                $this->sendMessage($apikey, $bot_username, $forward_attachments, $telegram_proxy, $chat_id, $project, $eventName, $eventData);
             }
         }
     }
@@ -79,10 +80,11 @@ class Telegram extends Base implements NotificationInterface
         $bot_username = $this->projectMetadataModel->get($project['id'], 'telegram_username', $this->configModel->get('telegram_username'));
         $chat_id = $this->projectMetadataModel->get($project['id'], 'telegram_group_cid');
         $forward_attachments = $this->userMetadataModel->get($project['id'], 'forward_attachments', $this->configModel->get('forward_attachments'));
+        $telegram_proxy = $this->userMetadataModel->get($project['id'], 'telegram_proxy', $this->configModel->get('telegram_proxy'));
         
         if (! empty($apikey)) 
         {
-            $this->sendMessage($apikey, $bot_username, $forward_attachments, $chat_id, $project, $eventName, $eventData);
+            $this->sendMessage($apikey, $bot_username, $forward_attachments, $telegram_proxy, $chat_id, $project, $eventName, $eventData);
         }
     }
     
@@ -97,7 +99,7 @@ class Telegram extends Base implements NotificationInterface
      * @param  string    $eventName
      * @param  array     $eventData
      */
-    protected function sendMessage($apikey, $bot_username, $forward_attachments, $chat_id, array $project, $eventName, array $eventData)
+    protected function sendMessage($apikey, $bot_username, $forward_attachments, $telegram_proxy, $chat_id, array $project, $eventName, array $eventData)
     {
     
         // Get required data
@@ -192,13 +194,14 @@ class Telegram extends Base implements NotificationInterface
             $telegram = new TelegramClass($apikey, $bot_username);
             
             // Setup proxy details if set in kanboard configuration
-            if (HTTP_PROXY_HOSTNAME != '')
-            {
+            if ($telegram_proxy != '')
+	        {
                 Request::setClient(new \GuzzleHttp\Client([
-                               'base_uri' => 'https://api.telegram.org',
-                               'proxy'    => 'tcp://'.HTTP_PROXY_HOSTNAME.':'.HTTP_PROXY_PORT,
-                               'verify'   => false,
-                             ]));
+	                    'base_uri' => 'https://api.telegram.org',
+                        'timeout' => 20,
+                        'verify' => false,
+                        'proxy'   => $telegram_proxy,
+                ]));
             }
 
             // Message pay load
@@ -241,4 +244,3 @@ class Telegram extends Base implements NotificationInterface
         }
     }
 }
-
