@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the TelegramBot package.
  *
@@ -22,7 +23,7 @@ class UserProfilePhotos extends Entity
     /**
      * {@inheritdoc}
      */
-    protected function subEntities()
+    protected function subEntities(): array
     {
         return [
             'photos' => PhotoSize::class,
@@ -34,19 +35,17 @@ class UserProfilePhotos extends Entity
      *
      * This method overrides the default getPhotos method and returns a nice array
      *
-     * @return PhotoSize[]
+     * @return PhotoSize[][]
      */
-    public function getPhotos()
+    public function getPhotos(): array
     {
         $all_photos = [];
 
         if ($these_photos = $this->getProperty('photos')) {
             foreach ($these_photos as $photos) {
-                $new_photos = [];
-                foreach ($photos as $photo) {
-                    $new_photos[] = new PhotoSize($photo);
-                }
-                $all_photos[] = $new_photos;
+                $all_photos[] = array_map(function ($photo) {
+                    return new PhotoSize($photo);
+                }, $photos);
             }
         }
 

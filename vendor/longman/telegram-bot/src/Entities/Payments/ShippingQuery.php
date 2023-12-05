@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the TelegramBot package.
  *
@@ -11,6 +12,7 @@
 namespace Longman\TelegramBot\Entities\Payments;
 
 use Longman\TelegramBot\Entities\Entity;
+use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Entities\User;
 use Longman\TelegramBot\Request;
 
@@ -31,10 +33,10 @@ class ShippingQuery extends Entity
     /**
      * {@inheritdoc}
      */
-    public function subEntities()
+    protected function subEntities(): array
     {
         return [
-            'user'             => User::class,
+            'from'             => User::class,
             'shipping_address' => ShippingAddress::class,
         ];
     }
@@ -45,9 +47,9 @@ class ShippingQuery extends Entity
      * @param bool  $ok
      * @param array $data
      *
-     * @return \Longman\TelegramBot\Entities\ServerResponse
+     * @return ServerResponse
      */
-    public function answer($ok, array $data = [])
+    public function answer(bool $ok, array $data = []): ServerResponse
     {
         return Request::answerShippingQuery(array_merge([
             'shipping_query_id' => $this->getId(),

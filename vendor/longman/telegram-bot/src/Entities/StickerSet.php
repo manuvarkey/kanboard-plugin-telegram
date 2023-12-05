@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the TelegramBot package.
  *
@@ -15,24 +16,24 @@ namespace Longman\TelegramBot\Entities;
  *
  * @link https://core.telegram.org/bots/api#stickerset
  *
- * @method string getName()          Sticker set name
- * @method string getTitle()         Sticker set title
- * @method bool   getContainsMasks() True, if the sticker set contains masks
+ * @method string    getName()          Sticker set name
+ * @method string    getTitle()         Sticker set title
+ * @method string    getStickerType()   Type of stickers in the set, currently one of “regular”, “mask”, “custom_emoji”
+ * @method bool      getIsAnimated()    True, if the sticker set contains animated stickers
+ * @method bool      getIsVideo()       True, if the sticker set contains video stickers
+ * @method Sticker[] getStickers()      List of all set stickers
+ * @method PhotoSize getThumbnail()     Optional. Sticker set thumbnail in the .WEBP or .TGS format
  */
 class StickerSet extends Entity
 {
     /**
-     * List of all set stickers
-     *
-     * This method overrides the default getStickers method
-     * and returns a nice array of Sticker objects.
-     *
-     * @return null|Sticker[]
+     * {@inheritdoc}
      */
-    public function getStickers()
+    protected function subEntities(): array
     {
-        $pretty_array = $this->makePrettyObjectArray(Sticker::class, 'stickers');
-
-        return empty($pretty_array) ? null : $pretty_array;
+        return [
+            'stickers'  => [Sticker::class],
+            'thumbnail' => PhotoSize::class,
+        ];
     }
 }

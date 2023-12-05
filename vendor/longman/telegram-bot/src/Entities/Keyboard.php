@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the TelegramBot package.
  *
@@ -19,22 +20,23 @@ use Longman\TelegramBot\Exception\TelegramException;
  *
  * @link https://core.telegram.org/bots/api#replykeyboardmarkup
  *
- * @method bool getResizeKeyboard()  Optional. Requests clients to resize the keyboard vertically for optimal fit (e.g., make the keyboard smaller if there are just two rows of buttons). Defaults to false, in which case the custom keyboard is always of the same height as the app's standard keyboard.
- * @method bool getOneTimeKeyboard() Optional. Requests clients to remove the keyboard as soon as it's been used. The keyboard will still be available, but clients will automatically display the usual letter-keyboard in the chat – the user can press a special button in the input field to see the custom keyboard again. Defaults to false.
- * @method bool getSelective()       Optional. Use this parameter if you want to show the keyboard to specific users only. Targets: 1) users that are @mentioned in the text of the Message object; 2) if the bot's message is a reply (has reply_to_message_id), sender of the original message.
+ * @method bool   getIsPersistent()          Optional. Requests clients to always show the keyboard when the regular keyboard is hidden. Defaults to false, in which case the custom keyboard can be hidden and opened with a keyboard icon.
+ * @method bool   getResizeKeyboard()        Optional. Requests clients to resize the keyboard vertically for optimal fit (e.g., make the keyboard smaller if there are just two rows of buttons). Defaults to false, in which case the custom keyboard is always of the same height as the app's standard keyboard.
+ * @method bool   getOneTimeKeyboard()       Optional. Requests clients to remove the keyboard as soon as it's been used. The keyboard will still be available, but clients will automatically display the usual letter-keyboard in the chat – the user can press a special button in the input field to see the custom keyboard again. Defaults to false.
+ * @method string getInputFieldPlaceholder() Optional. The placeholder to be shown in the input field when the keyboard is active; 1-64 characters
+ * @method bool   getSelective()             Optional. Use this parameter if you want to show the keyboard to specific users only. Targets: 1) users that are @mentioned in the text of the Message object; 2) if the bot's message is a reply (has reply_to_message_id), sender of the original message.
  *
- * @method $this setResizeKeyboard(bool $resize_keyboard)    Optional. Requests clients to resize the keyboard vertically for optimal fit (e.g., make the keyboard smaller if there are just two rows of buttons). Defaults to false, in which case the custom keyboard is always of the same height as the app's standard keyboard.
- * @method $this setOneTimeKeyboard(bool $one_time_keyboard) Optional. Requests clients to remove the keyboard as soon as it's been used. The keyboard will still be available, but clients will automatically display the usual letter-keyboard in the chat – the user can press a special button in the input field to see the custom keyboard again. Defaults to false.
- * @method $this setSelective(bool $selective)               Optional. Use this parameter if you want to show the keyboard to specific users only. Targets: 1) users that are @mentioned in the text of the Message object; 2) if the bot's message is a reply (has reply_to_message_id), sender of the original message.
+ * @method $this setIsPersistent(bool $is_persistent)                      Optional. Requests clients to always show the keyboard when the regular keyboard is hidden. Defaults to false, in which case the custom keyboard can be hidden and opened with a keyboard icon.
+ * @method $this setResizeKeyboard(bool $resize_keyboard)                  Optional. Requests clients to resize the keyboard vertically for optimal fit (e.g., make the keyboard smaller if there are just two rows of buttons). Defaults to false, in which case the custom keyboard is always of the same height as the app's standard keyboard.
+ * @method $this setOneTimeKeyboard(bool $one_time_keyboard)               Optional. Requests clients to remove the keyboard as soon as it's been used. The keyboard will still be available, but clients will automatically display the usual letter-keyboard in the chat – the user can press a special button in the input field to see the custom keyboard again. Defaults to false.
+ * @method $this setInputFieldPlaceholder(string $input_field_placeholder) Optional. The placeholder to be shown in the input field when the keyboard is active; 1-64 characters
+ * @method $this setSelective(bool $selective)                             Optional. Use this parameter if you want to show the keyboard to specific users only. Targets: 1) users that are @mentioned in the text of the Message object; 2) if the bot's message is a reply (has reply_to_message_id), sender of the original message.
  */
 class Keyboard extends Entity
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function __construct($data = [])
+    public function __construct()
     {
-        $data = call_user_func_array([$this, 'createFromParams'], func_get_args());
+        $data = $this->createFromParams(...func_get_args());
         parent::__construct($data);
 
         // Remove any empty buttons.
@@ -46,7 +48,7 @@ class Keyboard extends Entity
      *
      * @return bool
      */
-    public function isInlineKeyboard()
+    public function isInlineKeyboard(): bool
     {
         return $this instanceof InlineKeyboard;
     }
@@ -54,9 +56,9 @@ class Keyboard extends Entity
     /**
      * Get the proper keyboard button class for this keyboard.
      *
-     * @return KeyboardButton|InlineKeyboardButton
+     * @return string
      */
-    public function getKeyboardButtonClass()
+    public function getKeyboardButtonClass(): string
     {
         return $this->isInlineKeyboard() ? InlineKeyboardButton::class : KeyboardButton::class;
     }
@@ -66,7 +68,7 @@ class Keyboard extends Entity
      *
      * @return string
      */
-    public function getKeyboardType()
+    public function getKeyboardType(): string
     {
         return $this->isInlineKeyboard() ? 'inline_keyboard' : 'keyboard';
     }
@@ -76,7 +78,7 @@ class Keyboard extends Entity
      *
      * @return array
      */
-    protected function createFromParams()
+    protected function createFromParams(): array
     {
         $keyboard_type = $this->getKeyboardType();
 
@@ -111,18 +113,23 @@ class Keyboard extends Entity
             $data[$keyboard_type] = $new_keyboard;
         }
 
-        return $data;
+        // If $args was empty, $data still contains `false`
+        return $data ?: [];
     }
 
     /**
      * Create a new row in keyboard and add buttons.
      *
-     * @return $this
+     * @return Keyboard
      */
-    public function addRow()
+    public function addRow(): Keyboard
     {
         if (($new_row = $this->parseRow(func_get_args())) !== null) {
-            $this->{$this->getKeyboardType()}[] = $new_row;
+            // Workaround for "Indirect modification of overloaded property has no effect" notice in PHP 8.2.
+            // https://stackoverflow.com/a/19749730/3757422
+            $keyboard                         = $this->{$this->getKeyboardType()};
+            $keyboard[]                       = $new_row;
+            $this->{$this->getKeyboardType()} = $keyboard;
         }
 
         return $this;
@@ -131,11 +138,11 @@ class Keyboard extends Entity
     /**
      * Parse a given row to the correct array format.
      *
-     * @param array $row
+     * @param array|string $row
      *
-     * @return array
+     * @return array|null
      */
-    protected function parseRow($row)
+    protected function parseRow($row): ?array
     {
         if (!is_array($row)) {
             return null;
@@ -154,11 +161,11 @@ class Keyboard extends Entity
     /**
      * Parse a given button to the correct KeyboardButton object type.
      *
-     * @param array|string|\Longman\TelegramBot\Entities\KeyboardButton $button
+     * @param array|string|KeyboardButton $button
      *
-     * @return \Longman\TelegramBot\Entities\KeyboardButton|null
+     * @return KeyboardButton|null
      */
-    protected function parseButton($button)
+    protected function parseButton($button): ?KeyboardButton
     {
         $button_class = $this->getKeyboardButtonClass();
 
@@ -166,7 +173,7 @@ class Keyboard extends Entity
             return $button;
         }
 
-        if (!$this->isInlineKeyboard() || $button_class::couldBe($button)) {
+        if (!$this->isInlineKeyboard() || call_user_func([$button_class, 'couldBe'], $button)) {
             return new $button_class($button);
         }
 
@@ -176,10 +183,10 @@ class Keyboard extends Entity
     /**
      * {@inheritdoc}
      */
-    protected function validate()
+    protected function validate(): void
     {
         $keyboard_type = $this->getKeyboardType();
-        $keyboard = $this->getProperty($keyboard_type);
+        $keyboard      = $this->getProperty($keyboard_type);
 
         if ($keyboard !== null) {
             if (!is_array($keyboard)) {
@@ -201,10 +208,9 @@ class Keyboard extends Entity
      *
      * @param array $data
      *
-     * @return \Longman\TelegramBot\Entities\Keyboard
-     * @throws \Longman\TelegramBot\Exception\TelegramException
+     * @return Keyboard
      */
-    public static function remove(array $data = [])
+    public static function remove(array $data = []): Keyboard
     {
         return new static(array_merge(['keyboard' => [], 'remove_keyboard' => true, 'selective' => false], $data));
     }
@@ -216,10 +222,9 @@ class Keyboard extends Entity
      *
      * @param array $data
      *
-     * @return \Longman\TelegramBot\Entities\Keyboard
-     * @throws \Longman\TelegramBot\Exception\TelegramException
+     * @return Keyboard
      */
-    public static function forceReply(array $data = [])
+    public static function forceReply(array $data = []): Keyboard
     {
         return new static(array_merge(['keyboard' => [], 'force_reply' => true, 'selective' => false], $data));
     }

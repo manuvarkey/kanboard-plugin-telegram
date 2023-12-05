@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the TelegramBot package.
  *
@@ -10,9 +11,8 @@
 
 namespace Longman\TelegramBot\Entities;
 
-use Exception;
 use Longman\TelegramBot\Entities\InlineQuery\InlineEntity;
-use Longman\TelegramBot\TelegramLog;
+use Longman\TelegramBot\Entities\InputMedia\InputMedia;
 
 /**
  * Class Entity
@@ -24,8 +24,15 @@ use Longman\TelegramBot\TelegramLog;
  * @method array  getRawData()     Get the raw data passed to this entity
  * @method string getBotUsername() Return the bot name passed to this entity
  */
-abstract class Entity
+abstract class Entity implements \JsonSerializable
 {
+    public static $fixThumbnailRename = true;
+
+    public $bot_username = '';
+    public $raw_data = [];
+
+    private $fields = [];
+
     /**
      * Entity constructor.
      *
@@ -33,23 +40,47 @@ abstract class Entity
      *
      * @param array  $data
      * @param string $bot_username
-     *
-     * @throws \Longman\TelegramBot\Exception\TelegramException
      */
-    public function __construct($data, $bot_username = '')
+    public function __construct(array $data, string $bot_username = '')
     {
-        //Make sure we're not raw_data inception-ing
-        if (array_key_exists('raw_data', $data)) {
-            if ($data['raw_data'] === null) {
-                unset($data['raw_data']);
-            }
-        } else {
-            $data['raw_data'] = $data;
-        }
+        $this->bot_username = $bot_username;
+        $this->raw_data     = $data;
 
-        $data['bot_username'] = $bot_username;
         $this->assignMemberVariables($data);
         $this->validate();
+    }
+
+    /**
+     * Dynamically set a field.
+     *
+     * @param string $name
+     * @param mixed  $value
+     * @return void
+     */
+    public function __set(string $name, $value): void
+    {
+        $this->fields[$name] = $value;
+    }
+
+    /**
+     * Gets a dynamic field.
+     *
+     * @param string $name
+     * @return mixed|null
+     */
+    public function __get(string $name)
+    {
+        return $this->fields[$name] ?? null;
+    }
+
+    /**
+     * Return the data that should be serialized for Telegram.
+     *
+     * @return array
+     */
+    public function jsonSerialize(): array
+    {
+        return $this->fields;
     }
 
     /**
@@ -57,9 +88,9 @@ abstract class Entity
      *
      * @return string
      */
-    public function toJson()
+    public function toJson(): string
     {
-        return json_encode($this->getRawData());
+        return json_encode($this);
     }
 
     /**
@@ -77,9 +108,10 @@ abstract class Entity
      *
      * @param array $data
      */
-    protected function assignMemberVariables(array $data)
+    protected function assignMemberVariables(array $data): void
     {
         foreach ($data as $key => $value) {
+            $key = $this->fixThumbnailRename($key);
             $this->$key = $value;
         }
     }
@@ -89,35 +121,29 @@ abstract class Entity
      *
      * @return array
      */
-    protected function subEntities()
+    protected function subEntities(): array
     {
         return [];
     }
 
     /**
      * Perform any special entity validation
-     *
-     * @throws \Longman\TelegramBot\Exception\TelegramException
      */
-    protected function validate()
+    protected function validate(): void
     {
     }
 
     /**
      * Get a property from the current Entity
      *
-     * @param mixed $property
-     * @param mixed $default
+     * @param string $property
+     * @param mixed  $default
      *
      * @return mixed
      */
-    public function getProperty($property, $default = null)
+    public function getProperty(string $property, $default = null)
     {
-        if (isset($this->$property)) {
-            return $this->$property;
-        }
-
-        return $default;
+        return $this->$property ?? $default;
     }
 
     /**
@@ -130,8 +156,11 @@ abstract class Entity
      */
     public function __call($method, $args)
     {
+        $method = $this->fixThumbnailRename($method);
+
         //Convert method to snake_case (which is the name of the property)
-        $property_name = strtolower(ltrim(preg_replace('/[A-Z]/', '_$0', substr($method, 3)), '_'));
+        $property_name = mb_strtolower(ltrim(preg_replace('/[A-Z]/', '_$0', substr($method, 3)), '_'));
+        $property_name = $this->fixThumbnailRename($property_name);
 
         $action = substr($method, 0, 3);
         if ($action === 'get') {
@@ -142,15 +171,22 @@ abstract class Entity
                 $sub_entities = $this->subEntities();
 
                 if (isset($sub_entities[$property_name])) {
-                    return new $sub_entities[$property_name]($property, $this->getProperty('bot_username'));
+                    $class = $sub_entities[$property_name];
+
+                    if (is_array($class)) {
+                        return $this->makePrettyObjectArray(reset($class), $property_name);
+                    }
+
+                    return Factory::resolveEntityClass($class, $property, $this->getProperty('bot_username'));
                 }
 
                 return $property;
             }
         } elseif ($action === 'set') {
             // Limit setters to specific classes.
-            if ($this instanceof InlineEntity || $this instanceof Keyboard || $this instanceof KeyboardButton) {
+            if ($this instanceof InlineEntity || $this instanceof InputMedia || $this instanceof Keyboard || $this instanceof KeyboardButton) {
                 $this->$property_name = $args[0];
+                $this->raw_data[$property_name] = $args[0];
 
                 return $this;
             }
@@ -160,47 +196,78 @@ abstract class Entity
     }
 
     /**
+     * BC for renamed thumb -> thumbnail methods and fields
+     *
+     * @todo Remove after a few versions.
+     *
+     * @param string $name
+     * @return string
+     */
+    protected function fixThumbnailRename(string $name): string
+    {
+        return self::$fixThumbnailRename ? preg_replace('/([Tt])humb(nail)?/', '$1humbnail', $name, -1, $count) : $name;
+
+        /*if ($count) {
+            // Notify user that there are still outdated method calls?
+        }*/
+    }
+
+    /**
      * Return an array of nice objects from an array of object arrays
      *
      * This method is used to generate pretty object arrays
      * mainly for PhotoSize and Entities object arrays.
      *
      * @param string $class
-     * @param string $property
+     * @param string $property_name
      *
      * @return array
      */
-    protected function makePrettyObjectArray($class, $property)
+    protected function makePrettyObjectArray(string $class, string $property_name): array
     {
-        $new_objects = [];
+        $objects      = [];
+        $bot_username = $this->getProperty('bot_username');
 
-        try {
-            if ($objects = $this->getProperty($property)) {
-                foreach ($objects as $object) {
-                    if (!empty($object)) {
-                        $new_objects[] = new $class($object);
-                    }
-                }
-            }
-        } catch (Exception $e) {
-            $new_objects = [];
+        $properties = array_filter($this->getProperty($property_name) ?: []);
+        foreach ($properties as $property) {
+            $objects[] = Factory::resolveEntityClass($class, $property, $bot_username);
         }
 
-        return $new_objects;
+        return $objects;
     }
 
     /**
-     * Escape markdown special characters
+     * Escape markdown (v1) special characters
+     *
+     * @see https://core.telegram.org/bots/api#markdown-style
      *
      * @param string $string
      *
      * @return string
      */
-    public function escapeMarkdown($string)
+    public static function escapeMarkdown(string $string): string
     {
         return str_replace(
             ['[', '`', '*', '_',],
             ['\[', '\`', '\*', '\_',],
+            $string
+        );
+    }
+
+    /**
+     * Escape markdown (v2) special characters
+     *
+     * @see https://core.telegram.org/bots/api#markdownv2-style
+     *
+     * @param string $string
+     *
+     * @return string
+     */
+    public static function escapeMarkdownV2(string $string): string
+    {
+        return str_replace(
+            ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'],
+            ['\_', '\*', '\[', '\]', '\(', '\)', '\~', '\`', '\>', '\#', '\+', '\-', '\=', '\|', '\{', '\}', '\.', '\!'],
             $string
         );
     }
@@ -211,15 +278,17 @@ abstract class Entity
      * Mention the user with the username otherwise print first and last name
      * if the $escape_markdown argument is true special characters are escaped from the output
      *
+     * @todo What about MarkdownV2?
+     *
      * @param bool $escape_markdown
      *
-     * @return string|null
+     * @return string
      */
-    public function tryMention($escape_markdown = false)
+    public function tryMention($escape_markdown = false): string
     {
-        //TryMention only makes sense for the User and Chat entity.
+        // TryMention only makes sense for the User and Chat entity.
         if (!($this instanceof User || $this instanceof Chat)) {
-            return null;
+            return '';
         }
 
         //Try with the username first...
@@ -236,7 +305,7 @@ abstract class Entity
         }
 
         if ($escape_markdown) {
-            $name = $this->escapeMarkdown($name);
+            $name = self::escapeMarkdown($name);
         }
 
         return ($is_username ? '@' : '') . $name;

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the TelegramBot package.
  *
@@ -28,9 +29,9 @@ use Longman\TelegramBot\Entities\InputMessageContent\InputMessageContent;
  *   'foursquare_id'         => '',
  *   'reply_markup'          => <InlineKeyboard>,
  *   'input_message_content' => <InputMessageContent>,
- *   'thumb_url'             => '',
- *   'thumb_width'           => 30,
- *   'thumb_height'          => 30,
+ *   'thumbnail_url'         => '',
+ *   'thumbnail_width'       => 30,
+ *   'thumbnail_height'      => 30,
  * ];
  * </code>
  *
@@ -41,11 +42,14 @@ use Longman\TelegramBot\Entities\InputMessageContent\InputMessageContent;
  * @method string               getTitle()               Title of the venue
  * @method string               getAddress()             Address of the venue
  * @method string               getFoursquareId()        Optional. Foursquare identifier of the venue if known
+ * @method string               getFoursquareType()      Optional. Foursquare type of the venue, if known. (For example, “arts_entertainment/default”, “arts_entertainment/aquarium” or “food/icecream”.)
+ * @method string               getGooglePlaceId()       Optional. Google Places identifier of the venue
+ * @method string               getGooglePlaceType()     Optional. Google Places type of the venue
  * @method InlineKeyboard       getReplyMarkup()         Optional. Inline keyboard attached to the message
  * @method InputMessageContent  getInputMessageContent() Optional. Content of the message to be sent instead of the venue
- * @method string               getThumbUrl()            Optional. Url of the thumbnail for the result
- * @method int                  getThumbWidth()          Optional. Thumbnail width
- * @method int                  getThumbHeight()         Optional. Thumbnail height
+ * @method string               getThumbnailUrl()        Optional. Url of the thumbnail for the result
+ * @method int                  getThumbnailWidth()      Optional. Thumbnail width
+ * @method int                  getThumbnailHeight()     Optional. Thumbnail height
  *
  * @method $this setId(string $id)                                                  Unique identifier for this result, 1-64 Bytes
  * @method $this setLatitude(float $latitude)                                       Latitude of the venue location in degrees
@@ -53,11 +57,14 @@ use Longman\TelegramBot\Entities\InputMessageContent\InputMessageContent;
  * @method $this setTitle(string $title)                                            Title of the venue
  * @method $this setAddress(string $address)                                        Address of the venue
  * @method $this setFoursquareId(string $foursquare_id)                             Optional. Foursquare identifier of the venue if known
+ * @method $this setFoursquareType(string $foursquare_type)                         Optional. Foursquare type of the venue, if known. (For example, “arts_entertainment/default”, “arts_entertainment/aquarium” or “food/icecream”.)
+ * @method $this setGooglePlaceId(string $google_place_id)                          Optional. Google Places identifier of the venue
+ * @method $this setGooglePlaceType(string $google_place_type)                      Optional. Google Places type of the venue
  * @method $this setReplyMarkup(InlineKeyboard $reply_markup)                       Optional. Inline keyboard attached to the message
  * @method $this setInputMessageContent(InputMessageContent $input_message_content) Optional. Content of the message to be sent instead of the venue
- * @method $this setThumbUrl(string $thumb_url)                                     Optional. Url of the thumbnail for the result
- * @method $this setThumbWidth(int $thumb_width)                                    Optional. Thumbnail width
- * @method $this setThumbHeight(int $thumb_height)                                  Optional. Thumbnail height
+ * @method $this setThumbnailUrl(string $thumbnail_url)                             Optional. Url of the thumbnail for the result
+ * @method $this setThumbnailWidth(int $thumbnail_width)                            Optional. Thumbnail width
+ * @method $this setThumbnailHeight(int $thumbnail_height)                          Optional. Thumbnail height
  */
 class InlineQueryResultVenue extends InlineEntity implements InlineQueryResult
 {
@@ -65,8 +72,6 @@ class InlineQueryResultVenue extends InlineEntity implements InlineQueryResult
      * InlineQueryResultVenue constructor
      *
      * @param array $data
-     *
-     * @throws \Longman\TelegramBot\Exception\TelegramException
      */
     public function __construct(array $data = [])
     {

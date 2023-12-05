@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the TelegramBot package.
  *
@@ -22,10 +23,8 @@ class ReplyToMessage extends Message
      *
      * @param array  $data
      * @param string $bot_username
-     *
-     * @throws \Longman\TelegramBot\Exception\TelegramException
      */
-    public function __construct(array $data, $bot_username = '')
+    public function __construct(array $data, string $bot_username = '')
     {
         //As explained in the documentation
         //Reply to message can't contain other reply to message entities
