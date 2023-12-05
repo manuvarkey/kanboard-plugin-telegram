@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the TelegramBot package.
  *
@@ -13,7 +14,7 @@ namespace Longman\TelegramBot\Exception;
 /**
  * Main exception class used for exception handling
  */
-class TelegramLogException extends \Exception
+class TelegramLogException extends TelegramException
 {
 
 }

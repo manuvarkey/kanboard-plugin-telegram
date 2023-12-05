@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the TelegramBot package.
  *
@@ -10,169 +11,153 @@
 
 namespace Longman\TelegramBot\Entities;
 
+use Longman\TelegramBot\Entities\Games\Game;
 use Longman\TelegramBot\Entities\Payments\Invoice;
 use Longman\TelegramBot\Entities\Payments\SuccessfulPayment;
+use Longman\TelegramBot\Entities\TelegramPassport\PassportData;
+use Longman\TelegramBot\Entities\Topics\ForumTopicClosed;
+use Longman\TelegramBot\Entities\Topics\ForumTopicCreated;
+use Longman\TelegramBot\Entities\Topics\ForumTopicEdited;
+use Longman\TelegramBot\Entities\Topics\ForumTopicReopened;
+use Longman\TelegramBot\Entities\Topics\GeneralForumTopicHidden;
+use Longman\TelegramBot\Entities\Topics\GeneralForumTopicUnhidden;
 
 /**
  * Class Message
  *
+ * Represents a message
+ *
  * @link https://core.telegram.org/bots/api#message
  *
- * @method int               getMessageId()             Unique message identifier
- * @method User              getFrom()                  Optional. Sender, can be empty for messages sent to channels
- * @method int               getDate()                  Date the message was sent in Unix time
- * @method Chat              getChat()                  Conversation the message belongs to
- * @method User              getForwardFrom()           Optional. For forwarded messages, sender of the original message
- * @method Chat              getForwardFromChat()       Optional. For messages forwarded from a channel, information about the original channel
- * @method int               getForwardFromMessageId()  Optional. For forwarded channel posts, identifier of the original message in the channel
- * @method string            getForwardSignature()      Optional. For messages forwarded from channels, signature of the post author if present
- * @method int               getForwardDate()           Optional. For forwarded messages, date the original message was sent in Unix time
- * @method Message           getReplyToMessage()        Optional. For replies, the original message. Note that the Message object in this field will not contain further reply_to_message fields even if it itself is a reply.
- * @method int               getEditDate()              Optional. Date the message was last edited in Unix time
- * @method string            getMediaGroupId()          Optional. The unique identifier of a media message group this message belongs to
- * @method string            getAuthorSignature()       Optional. Signature of the post author for messages in channels
- * @method Audio             getAudio()                 Optional. Message is an audio file, information about the file
- * @method Document          getDocument()              Optional. Message is a general file, information about the file
- * @method Sticker           getSticker()               Optional. Message is a sticker, information about the sticker
- * @method Video             getVideo()                 Optional. Message is a video, information about the video
- * @method Voice             getVoice()                 Optional. Message is a voice message, information about the file
- * @method VideoNote         getVideoNote()             Optional. Message is a video note message, information about the video
- * @method string            getCaption()               Optional. Caption for the document, photo or video, 0-200 characters
- * @method Contact           getContact()               Optional. Message is a shared contact, information about the contact
- * @method Location          getLocation()              Optional. Message is a shared location, information about the location
- * @method Venue             getVenue()                 Optional. Message is a venue, information about the venue
- * @method User              getLeftChatMember()        Optional. A member was removed from the group, information about them (this member may be the bot itself)
- * @method string            getNewChatTitle()          Optional. A chat title was changed to this value
- * @method bool              getDeleteChatPhoto()       Optional. Service message: the chat photo was deleted
- * @method bool              getGroupChatCreated()      Optional. Service message: the group has been created
- * @method bool              getSupergroupChatCreated() Optional. Service message: the supergroup has been created. This field can't be received in a message coming through updates, because bot can’t be a member of a supergroup when it is created. It can only be found in reply_to_message if someone replies to a very first message in a directly created supergroup.
- * @method bool              getChannelChatCreated()    Optional. Service message: the channel has been created. This field can't be received in a message coming through updates, because bot can’t be a member of a channel when it is created. It can only be found in reply_to_message if someone replies to a very first message in a channel.
- * @method int               getMigrateToChatId()       Optional. The group has been migrated to a supergroup with the specified identifier. This number may be greater than 32 bits and some programming languages may have difficulty/silent defects in interpreting it. But it smaller than 52 bits, so a signed 64 bit integer or double-precision float type are safe for storing this identifier.
- * @method int               getMigrateFromChatId()     Optional. The supergroup has been migrated from a group with the specified identifier. This number may be greater than 32 bits and some programming languages may have difficulty/silent defects in interpreting it. But it smaller than 52 bits, so a signed 64 bit integer or double-precision float type are safe for storing this identifier.
- * @method Message           getPinnedMessage()         Optional. Specified message was pinned. Note that the Message object in this field will not contain further reply_to_message fields even if it is itself a reply.
- * @method Invoice           getInvoice()               Optional. Message is an invoice for a payment, information about the invoice.
- * @method SuccessfulPayment getSuccessfulPayment()     Optional. Message is a service message about a successful payment, information about the payment.
+ * @method int                                    getMessageId()                              Unique message identifier
+ * @method int                                    getMessageThreadId()                        Optional. Unique identifier of a message thread to which the message belongs; for supergroups only
+ * @method User                                   getFrom()                                   Optional. Sender, can be empty for messages sent to channels
+ * @method Chat                                   getSenderChat()                             Optional. Sender of the message, sent on behalf of a chat. The channel itself for channel messages. The supergroup itself for messages from anonymous group administrators. The linked channel for messages automatically forwarded to the discussion group
+ * @method int                                    getDate()                                   Date the message was sent in Unix time
+ * @method Chat                                   getChat()                                   Conversation the message belongs to
+ * @method User                                   getForwardFrom()                            Optional. For forwarded messages, sender of the original message
+ * @method Chat                                   getForwardFromChat()                        Optional. For messages forwarded from a channel, information about the original channel
+ * @method int                                    getForwardFromMessageId()                   Optional. For forwarded channel posts, identifier of the original message in the channel
+ * @method string                                 getForwardSignature()                       Optional. For messages forwarded from channels, signature of the post author if present
+ * @method string                                 getForwardSenderName()                      Optional. Sender's name for messages forwarded from users who disallow adding a link to their account in forwarded messages
+ * @method int                                    getForwardDate()                            Optional. For forwarded messages, date the original message was sent in Unix time
+ * @method bool                                   getIsTopicMessage()                         Optional. True, if the message is sent to a forum topic
+ * @method bool                                   getIsAutomaticForward()                     Optional. True, if the message is a channel post that was automatically forwarded to the connected discussion group
+ * @method ReplyToMessage                         getReplyToMessage()                         Optional. For replies, the original message. Note that the Message object in this field will not contain further reply_to_message fields even if it itself is a reply.
+ * @method User                                   getViaBot()                                 Optional. Bot through which the message was sent
+ * @method int                                    getEditDate()                               Optional. Date the message was last edited in Unix time
+ * @method bool                                   getHasProtectedContent()                    Optional. True, if the message can't be forwarded
+ * @method string                                 getMediaGroupId()                           Optional. The unique identifier of a media message group this message belongs to
+ * @method string                                 getAuthorSignature()                        Optional. Signature of the post author for messages in channels
+ * @method MessageEntity[]                        getEntities()                               Optional. For text messages, special entities like usernames, URLs, bot commands, etc. that appear in the text
+ * @method MessageEntity[]                        getCaptionEntities()                        Optional. For messages with a caption, special entities like usernames, URLs, bot commands, etc. that appear in the caption
+ * @method Audio                                  getAudio()                                  Optional. Message is an audio file, information about the file
+ * @method Document                               getDocument()                               Optional. Message is a general file, information about the file
+ * @method Animation                              getAnimation()                              Optional. Message is an animation, information about the animation. For backward compatibility, when this field is set, the document field will also be set
+ * @method Game                                   getGame()                                   Optional. Message is a game, information about the game.
+ * @method PhotoSize[]                            getPhoto()                                  Optional. Message is a photo, available sizes of the photo
+ * @method Sticker                                getSticker()                                Optional. Message is a sticker, information about the sticker
+ * @method Story                                  getStory()                                  Optional. Message is a forwarded story
+ * @method Video                                  getVideo()                                  Optional. Message is a video, information about the video
+ * @method Voice                                  getVoice()                                  Optional. Message is a voice message, information about the file
+ * @method VideoNote                              getVideoNote()                              Optional. Message is a video note message, information about the video
+ * @method string                                 getCaption()                                Optional. Caption for the document, photo or video, 0-200 characters
+ * @method bool                                   getHasMediaSpoiler()                        Optional. True, if the message media is covered by a spoiler animation
+ * @method Contact                                getContact()                                Optional. Message is a shared contact, information about the contact
+ * @method Location                               getLocation()                               Optional. Message is a shared location, information about the location
+ * @method Venue                                  getVenue()                                  Optional. Message is a venue, information about the venue
+ * @method Poll                                   getPoll()                                   Optional. Message is a native poll, information about the poll
+ * @method Dice                                   getDice()                                   Optional. Message is a dice with random value, 1-6 for “🎲” and “🎯” base emoji, 1-5 for “🏀” and “⚽” base emoji, 1-64 for “🎰” base emoji
+ * @method User[]                                 getNewChatMembers()                         Optional. A new member(s) was added to the group, information about them (one of this members may be the bot itself)
+ * @method User                                   getLeftChatMember()                         Optional. A member was removed from the group, information about them (this member may be the bot itself)
+ * @method string                                 getNewChatTitle()                           Optional. A chat title was changed to this value
+ * @method PhotoSize[]                            getNewChatPhoto()                           Optional. A chat photo was changed to this value
+ * @method MessageAutoDeleteTimerChanged          getMessageAutoDeleteTimerChanged()          Optional. Service message: auto-delete timer settings changed in the chat
+ * @method bool                                   getDeleteChatPhoto()                        Optional. Service message: the chat photo was deleted
+ * @method bool                                   getGroupChatCreated()                       Optional. Service message: the group has been created
+ * @method bool                                   getSupergroupChatCreated()                  Optional. Service message: the supergroup has been created. This field can't be received in a message coming through updates, because bot can’t be a member of a supergroup when it is created. It can only be found in reply_to_message if someone replies to a very first message in a directly created supergroup.
+ * @method bool                                   getChannelChatCreated()                     Optional. Service message: the channel has been created. This field can't be received in a message coming through updates, because bot can’t be a member of a channel when it is created. It can only be found in reply_to_message if someone replies to a very first message in a channel.
+ * @method int                                    getMigrateToChatId()                        Optional. The group has been migrated to a supergroup with the specified identifier. This number may be greater than 32 bits and some programming languages may have difficulty/silent defects in interpreting it. But it smaller than 52 bits, so a signed 64 bit integer or double-precision float type are safe for storing this identifier.
+ * @method int                                    getMigrateFromChatId()                      Optional. The supergroup has been migrated from a group with the specified identifier. This number may be greater than 32 bits and some programming languages may have difficulty/silent defects in interpreting it. But it smaller than 52 bits, so a signed 64 bit integer or double-precision float type are safe for storing this identifier.
+ * @method Message                                getPinnedMessage()                          Optional. Specified message was pinned. Note that the Message object in this field will not contain further reply_to_message fields even if it is itself a reply.
+ * @method Invoice                                getInvoice()                                Optional. Message is an invoice for a payment, information about the invoice.
+ * @method SuccessfulPayment                      getSuccessfulPayment()                      Optional. Message is a service message about a successful payment, information about the payment.
+ * @method UserShared                             getUserShared()                             Optional. Service message: a user was shared with the bot
+ * @method ChatShared                             getChatShared()                             Optional. Service message: a chat was shared with the bot
+ * @method string                                 getConnectedWebsite()                       Optional. The domain name of the website on which the user has logged in.
+ * @method WriteAccessAllowed                     getWriteAccessAllowed()                     Optional. Service message: the user allowed the bot added to the attachment menu to write messages
+ * @method PassportData                           getPassportData()                           Optional. Telegram Passport data
+ * @method ProximityAlertTriggered                getProximityAlertTriggered()                Optional. Service message. A user in the chat triggered another user's proximity alert while sharing Live Location.
+ * @method ForumTopicCreated                      getForumTopicCreated()                      Optional. Service message: forum topic created
+ * @method ForumTopicEdited                       getForumTopicEdited()                       Optional. Service message: forum topic edited
+ * @method ForumTopicClosed                       getForumTopicClosed()                       Optional. Service message: forum topic closed
+ * @method ForumTopicReopened                     getForumTopicReopened()                     Optional. Service message: forum topic reopened
+ * @method GeneralForumTopicHidden                getGeneralForumTopicHidden()                Optional. Service message: the 'General' forum topic hidden
+ * @method GeneralForumTopicUnhidden              getGeneralForumTopicUnhidden()              Optional. Service message: the 'General' forum topic unhidden
+ * @method VideoChatScheduled                     getVideoChatScheduled()                     Optional. Service message: voice chat scheduled
+ * @method VideoChatStarted                       getVideoChatStarted()                       Optional. Service message: voice chat started
+ * @method VideoChatEnded                         getVideoChatEnded()                         Optional. Service message: voice chat ended
+ * @method VideoChatParticipantsInvited           getVideoChatParticipantsInvited()           Optional. Service message: new participants invited to a voice chat
+ * @method WebAppData                             getWebAppData()                             Optional. Service message: data sent by a Web App
+ * @method InlineKeyboard                         getReplyMarkup()                            Optional. Inline keyboard attached to the message. login_url buttons are represented as ordinary url buttons.
  */
 class Message extends Entity
 {
     /**
      * {@inheritdoc}
      */
-    protected function subEntities()
+    protected function subEntities(): array
     {
         return [
-            'from'               => User::class,
-            'chat'               => Chat::class,
-            'forward_from'       => User::class,
-            'forward_from_chat'  => Chat::class,
-            'reply_to_message'   => ReplyToMessage::class,
-            'entities'           => MessageEntity::class,
-            'caption_entities'   => MessageEntity::class,
-            'audio'              => Audio::class,
-            'document'           => Document::class,
-            'photo'              => PhotoSize::class,
-            'sticker'            => Sticker::class,
-            'video'              => Video::class,
-            'voice'              => Voice::class,
-            'video_note'         => VideoNote::class,
-            'contact'            => Contact::class,
-            'location'           => Location::class,
-            'venue'              => Venue::class,
-            'new_chat_members'   => User::class,
-            'left_chat_member'   => User::class,
-            'new_chat_photo'     => PhotoSize::class,
-            'pinned_message'     => Message::class,
-            'invoice'            => Invoice::class,
-            'successful_payment' => SuccessfulPayment::class,
+            'from'                              => User::class,
+            'sender_chat'                       => Chat::class,
+            'chat'                              => Chat::class,
+            'forward_from'                      => User::class,
+            'forward_from_chat'                 => Chat::class,
+            'reply_to_message'                  => ReplyToMessage::class,
+            'via_bot'                           => User::class,
+            'entities'                          => [MessageEntity::class],
+            'animation'                         => Animation::class,
+            'audio'                             => Audio::class,
+            'document'                          => Document::class,
+            'photo'                             => [PhotoSize::class],
+            'sticker'                           => Sticker::class,
+            'story'                             => Story::class,
+            'video'                             => Video::class,
+            'video_note'                        => VideoNote::class,
+            'voice'                             => Voice::class,
+            'caption_entities'                  => [MessageEntity::class],
+            'contact'                           => Contact::class,
+            'dice'                              => Dice::class,
+            'game'                              => Game::class,
+            'poll'                              => Poll::class,
+            'venue'                             => Venue::class,
+            'location'                          => Location::class,
+            'new_chat_members'                  => [User::class],
+            'left_chat_member'                  => User::class,
+            'new_chat_photo'                    => [PhotoSize::class],
+            'message_auto_delete_timer_changed' => MessageAutoDeleteTimerChanged::class,
+            'pinned_message'                    => __CLASS__,
+            'invoice'                           => Invoice::class,
+            'successful_payment'                => SuccessfulPayment::class,
+            'user_shared'                       => UserShared::class,
+            'chat_shared'                       => ChatShared::class,
+            'write_access_allowed'              => WriteAccessAllowed::class,
+            'passport_data'                     => PassportData::class,
+            'proximity_alert_triggered'         => ProximityAlertTriggered::class,
+            'forum_topic_created'               => ForumTopicCreated::class,
+            'forum_topic_edited'                => ForumTopicEdited::class,
+            'forum_topic_closed'                => ForumTopicClosed::class,
+            'forum_topic_reopened'              => ForumTopicReopened::class,
+            'general_forum_topic_hidden'        => GeneralForumTopicHidden::class,
+            'general_forum_topic_unhidden'      => GeneralForumTopicUnhidden::class,
+            'video_chat_scheduled'              => VideoChatScheduled::class,
+            'video_chat_started'                => VideoChatStarted::class,
+            'video_chat_ended'                  => VideoChatEnded::class,
+            'video_chat_participants_invited'   => VideoChatParticipantsInvited::class,
+            'web_app_data'                      => WebAppData::class,
+            'reply_markup'                      => InlineKeyboard::class,
         ];
-    }
-
-    /**
-     * Message constructor
-     *
-     * @param array  $data
-     * @param string $bot_username
-     *
-     * @throws \Longman\TelegramBot\Exception\TelegramException
-     */
-    public function __construct(array $data, $bot_username = '')
-    {
-        parent::__construct($data, $bot_username);
-    }
-
-    /**
-     * Optional. Message is a photo, available sizes of the photo
-     *
-     * This method overrides the default getPhoto method
-     * and returns a nice array of PhotoSize objects.
-     *
-     * @return null|PhotoSize[]
-     */
-    public function getPhoto()
-    {
-        $pretty_array = $this->makePrettyObjectArray(PhotoSize::class, 'photo');
-
-        return empty($pretty_array) ? null : $pretty_array;
-    }
-
-    /**
-     * Optional. A chat photo was changed to this value
-     *
-     * This method overrides the default getNewChatPhoto method
-     * and returns a nice array of PhotoSize objects.
-     *
-     * @return null|PhotoSize[]
-     */
-    public function getNewChatPhoto()
-    {
-        $pretty_array = $this->makePrettyObjectArray(PhotoSize::class, 'new_chat_photo');
-
-        return empty($pretty_array) ? null : $pretty_array;
-    }
-
-    /**
-     * Optional. A new member(s) was added to the group, information about them (one of this members may be the bot itself)
-     *
-     * This method overrides the default getNewChatMembers method
-     * and returns a nice array of User objects.
-     *
-     * @return null|User[]
-     */
-    public function getNewChatMembers()
-    {
-        $pretty_array = $this->makePrettyObjectArray(User::class, 'new_chat_members');
-
-        return empty($pretty_array) ? null : $pretty_array;
-    }
-
-    /**
-     * Optional. For text messages, special entities like usernames, URLs, bot commands, etc. that appear in the text
-     *
-     * This method overrides the default getEntities method
-     * and returns a nice array of MessageEntity objects.
-     *
-     * @return null|MessageEntity[]
-     */
-    public function getEntities()
-    {
-        $pretty_array = $this->makePrettyObjectArray(MessageEntity::class, 'entities');
-
-        return empty($pretty_array) ? null : $pretty_array;
-    }
-
-    /**
-     * Optional. For messages with a caption, special entities like usernames, URLs, bot commands, etc. that appear in the caption
-     *
-     * This method overrides the default getCaptionEntities method
-     * and returns a nice array of MessageEntity objects.
-     *
-     * @return null|MessageEntity[]
-     */
-    public function getCaptionEntities()
-    {
-        $pretty_array = $this->makePrettyObjectArray(MessageEntity::class, 'caption_entities');
-
-        return empty($pretty_array) ? null : $pretty_array;
     }
 
     /**
@@ -180,14 +165,14 @@ class Message extends Entity
      *
      * @return string|null
      */
-    public function getFullCommand()
+    public function getFullCommand(): ?string
     {
-        $text = $this->getProperty('text');
+        $text = $this->getProperty('text') ?? '';
         if (strpos($text, '/') !== 0) {
             return null;
         }
 
-        $no_EOL   = strtok($text, PHP_EOL);
+        $no_EOL = strtok($text, PHP_EOL);
         $no_space = strtok($text, ' ');
 
         //try to understand which separator \n or space divide /command from text
@@ -199,13 +184,13 @@ class Message extends Entity
      *
      * @return string|null
      */
-    public function getCommand()
+    public function getCommand(): ?string
     {
         if ($command = $this->getProperty('command')) {
             return $command;
         }
 
-        $full_command = $this->getFullCommand();
+        $full_command = $this->getFullCommand() ?? '';
         if (strpos($full_command, '/') !== 0) {
             return null;
         }
@@ -213,7 +198,7 @@ class Message extends Entity
 
         //check if command is followed by bot username
         $split_cmd = explode('@', $full_command);
-        if (!isset($split_cmd[1])) {
+        if (! isset($split_cmd[1])) {
             //command is not followed by name
             return $full_command;
         }
@@ -229,11 +214,11 @@ class Message extends Entity
     /**
      * For text messages, the actual UTF-8 text of the message, 0-4096 characters.
      *
-     * @param bool $without_cmd
+     * @param  bool  $without_cmd
      *
-     * @return string
+     * @return string|null
      */
-    public function getText($without_cmd = false)
+    public function getText($without_cmd = false): ?string
     {
         $text = $this->getProperty('text');
 
@@ -252,9 +237,8 @@ class Message extends Entity
      * Bot added in chat
      *
      * @return bool
-     * @throws \Longman\TelegramBot\Exception\TelegramException
      */
-    public function botAddedInChat()
+    public function botAddedInChat(): bool
     {
         foreach ($this->getNewChatMembers() as $member) {
             if ($member instanceof User && $member->getUsername() === $this->getBotUsername()) {
@@ -270,19 +254,24 @@ class Message extends Entity
      *
      * @return string
      */
-    public function getType()
+    public function getType(): string
     {
         $types = [
             'text',
+            'animation',
             'audio',
             'document',
             'photo',
             'sticker',
             'video',
+            'video_note',
             'voice',
             'contact',
-            'location',
+            'dice',
+            'game',
+            'poll',
             'venue',
+            'location',
             'new_chat_members',
             'left_chat_member',
             'new_chat_title',
@@ -291,16 +280,34 @@ class Message extends Entity
             'group_chat_created',
             'supergroup_chat_created',
             'channel_chat_created',
+            'message_auto_delete_timer_changed',
             'migrate_to_chat_id',
             'migrate_from_chat_id',
             'pinned_message',
             'invoice',
             'successful_payment',
+            'user_shared',
+            'chat_shared',
+            'write_access_allowed',
+            'passport_data',
+            'proximity_alert_triggered',
+            'forum_topic_created',
+            'forum_topic_edited',
+            'forum_topic_closed',
+            'forum_topic_reopened',
+            'general_forum_topic_hidden',
+            'general_forum_topic_unhidden',
+            'video_chat_scheduled',
+            'video_chat_started',
+            'video_chat_ended',
+            'video_chat_participants_invited',
+            'web_app_data',
+            'reply_markup',
         ];
 
-        $is_command = strlen($this->getCommand()) > 0;
+        $is_command = $this->getCommand() !== null;
         foreach ($types as $type) {
-            if ($this->getProperty($type)) {
+            if ($this->getProperty($type) !== null) {
                 if ($is_command && $type === 'text') {
                     return 'command';
                 }

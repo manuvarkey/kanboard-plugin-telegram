@@ -14,7 +14,7 @@
         "discard-changes": true
     },
     "require" : {
-        "php" : ">=5.3",
-        "longman/telegram-bot" : "0.51.0"
+        "php" : ">=7.3|>=8.0",
+        "longman/telegram-bot" : "0.82.0"
     }
 }

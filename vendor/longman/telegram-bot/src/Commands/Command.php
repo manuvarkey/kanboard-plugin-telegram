@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the TelegramBot package.
  *
@@ -12,10 +13,18 @@ namespace Longman\TelegramBot\Commands;
 
 use Longman\TelegramBot\DB;
 use Longman\TelegramBot\Entities\CallbackQuery;
+use Longman\TelegramBot\Entities\ChatJoinRequest;
+use Longman\TelegramBot\Entities\ChatMemberUpdated;
 use Longman\TelegramBot\Entities\ChosenInlineResult;
 use Longman\TelegramBot\Entities\InlineQuery;
 use Longman\TelegramBot\Entities\Message;
+use Longman\TelegramBot\Entities\Payments\PreCheckoutQuery;
+use Longman\TelegramBot\Entities\Payments\ShippingQuery;
+use Longman\TelegramBot\Entities\Poll;
+use Longman\TelegramBot\Entities\PollAnswer;
+use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Entities\Update;
+use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
 use Longman\TelegramBot\Telegram;
 
@@ -31,20 +40,42 @@ use Longman\TelegramBot\Telegram;
  * @method InlineQuery         getInlineQuery()        Optional. New incoming inline query
  * @method ChosenInlineResult  getChosenInlineResult() Optional. The result of an inline query that was chosen by a user and sent to their chat partner.
  * @method CallbackQuery       getCallbackQuery()      Optional. New incoming callback query
+ * @method ShippingQuery       getShippingQuery()      Optional. New incoming shipping query. Only for invoices with flexible price
+ * @method PreCheckoutQuery    getPreCheckoutQuery()   Optional. New incoming pre-checkout query. Contains full information about checkout
+ * @method Poll                getPoll()               Optional. New poll state. Bots receive only updates about polls, which are sent or stopped by the bot
+ * @method PollAnswer          getPollAnswer()         Optional. A user changed their answer in a non-anonymous poll. Bots receive new votes only in polls that were sent by the bot itself.
+ * @method ChatMemberUpdated   getMyChatMember()       Optional. The bot's chat member status was updated in a chat. For private chats, this update is received only when the bot is blocked or unblocked by the user.
+ * @method ChatMemberUpdated   getChatMember()         Optional. A chat member's status was updated in a chat. The bot must be an administrator in the chat and must explicitly specify “chat_member” in the list of allowed_updates to receive these updates.
+ * @method ChatJoinRequest     getChatJoinRequest()    Optional. A request to join the chat has been sent. The bot must have the can_invite_users administrator right in the chat to receive these updates.
  */
 abstract class Command
 {
     /**
+     * Auth level for user commands
+     */
+    public const AUTH_USER = 'User';
+
+    /**
+     * Auth level for system commands
+     */
+    public const AUTH_SYSTEM = 'System';
+
+    /**
+     * Auth level for admin commands
+     */
+    public const AUTH_ADMIN = 'Admin';
+
+    /**
      * Telegram object
      *
-     * @var \Longman\TelegramBot\Telegram
+     * @var Telegram
      */
     protected $telegram;
 
     /**
      * Update object
      *
-     * @var \Longman\TelegramBot\Entities\Update
+     * @var Update
      */
     protected $update;
 
@@ -86,14 +117,14 @@ abstract class Command
     /**
      * If this command is enabled
      *
-     * @var boolean
+     * @var bool
      */
     protected $enabled = true;
 
     /**
      * If this command needs mysql
      *
-     * @var boolean
+     * @var bool
      */
     protected $need_mysql = false;
 
@@ -114,28 +145,28 @@ abstract class Command
     /**
      * Constructor
      *
-     * @param \Longman\TelegramBot\Telegram        $telegram
-     * @param \Longman\TelegramBot\Entities\Update $update
+     * @param Telegram    $telegram
+     * @param Update|null $update
      */
-    public function __construct(Telegram $telegram, Update $update = null)
+    public function __construct(Telegram $telegram, ?Update $update = null)
     {
         $this->telegram = $telegram;
-        $this->setUpdate($update);
+        if ($update !== null) {
+            $this->setUpdate($update);
+        }
         $this->config = $telegram->getCommandConfig($this->name);
     }
 
     /**
      * Set update object
      *
-     * @param \Longman\TelegramBot\Entities\Update $update
+     * @param Update $update
      *
-     * @return \Longman\TelegramBot\Commands\Command
+     * @return Command
      */
-    public function setUpdate(Update $update = null)
+    public function setUpdate(Update $update): Command
     {
-        if ($update !== null) {
-            $this->update = $update;
-        }
+        $this->update = $update;
 
         return $this;
     }
@@ -143,10 +174,10 @@ abstract class Command
     /**
      * Pre-execute command
      *
-     * @return \Longman\TelegramBot\Entities\ServerResponse
-     * @throws \Longman\TelegramBot\Exception\TelegramException
+     * @return ServerResponse
+     * @throws TelegramException
      */
-    public function preExecute()
+    public function preExecute(): ServerResponse
     {
         if ($this->need_mysql && !($this->telegram->isDbEnabled() && DB::isDbConnected())) {
             return $this->executeNoDb();
@@ -176,37 +207,28 @@ abstract class Command
     /**
      * Execute command
      *
-     * @return \Longman\TelegramBot\Entities\ServerResponse
-     * @throws \Longman\TelegramBot\Exception\TelegramException
+     * @return ServerResponse
+     * @throws TelegramException
      */
-    abstract public function execute();
+    abstract public function execute(): ServerResponse;
 
     /**
      * Execution if MySQL is required but not available
      *
-     * @return \Longman\TelegramBot\Entities\ServerResponse
-     * @throws \Longman\TelegramBot\Exception\TelegramException
+     * @return ServerResponse
+     * @throws TelegramException
      */
-    public function executeNoDb()
+    public function executeNoDb(): ServerResponse
     {
-        //Preparing message
-        $message = $this->getMessage();
-        $chat_id = $message->getChat()->getId();
-
-        $data = [
-            'chat_id' => $chat_id,
-            'text'    => 'Sorry no database connection, unable to execute "' . $this->name . '" command.',
-        ];
-
-        return Request::sendMessage($data);
+        return $this->replyToChat('Sorry no database connection, unable to execute "' . $this->name . '" command.');
     }
 
     /**
      * Get update object
      *
-     * @return \Longman\TelegramBot\Entities\Update
+     * @return Update|null
      */
-    public function getUpdate()
+    public function getUpdate(): ?Update
     {
         return $this->update;
     }
@@ -221,7 +243,7 @@ abstract class Command
      *
      * @return Command
      */
-    public function __call($name, array $arguments)
+    public function __call(string $name, array $arguments)
     {
         if ($this->update === null) {
             return null;
@@ -232,31 +254,28 @@ abstract class Command
     /**
      * Get command config
      *
-     * Look for config $name if found return it, if not return null.
+     * Look for config $name if found return it, if not return $default.
      * If $name is not set return all set config.
      *
      * @param string|null $name
+     * @param mixed       $default
      *
-     * @return array|mixed|null
+     * @return mixed
      */
-    public function getConfig($name = null)
+    public function getConfig(?string $name = null, $default = null)
     {
         if ($name === null) {
             return $this->config;
         }
-        if (isset($this->config[$name])) {
-            return $this->config[$name];
-        }
-
-        return null;
+        return $this->config[$name] ?? $default;
     }
 
     /**
      * Get telegram object
      *
-     * @return \Longman\TelegramBot\Telegram
+     * @return Telegram
      */
-    public function getTelegram()
+    public function getTelegram(): Telegram
     {
         return $this->telegram;
     }
@@ -266,7 +285,7 @@ abstract class Command
      *
      * @return string
      */
-    public function getUsage()
+    public function getUsage(): string
     {
         return $this->usage;
     }
@@ -276,7 +295,7 @@ abstract class Command
      *
      * @return string
      */
-    public function getVersion()
+    public function getVersion(): string
     {
         return $this->version;
     }
@@ -286,7 +305,7 @@ abstract class Command
      *
      * @return string
      */
-    public function getDescription()
+    public function getDescription(): string
     {
         return $this->description;
     }
@@ -296,7 +315,7 @@ abstract class Command
      *
      * @return string
      */
-    public function getName()
+    public function getName(): string
     {
         return $this->name;
     }
@@ -306,7 +325,7 @@ abstract class Command
      *
      * @return bool
      */
-    public function showInHelp()
+    public function showInHelp(): bool
     {
         return $this->show_in_help;
     }
@@ -316,7 +335,7 @@ abstract class Command
      *
      * @return bool
      */
-    public function isEnabled()
+    public function isEnabled(): bool
     {
         return $this->enabled;
     }
@@ -326,7 +345,7 @@ abstract class Command
      *
      * @return bool
      */
-    public function isPrivateOnly()
+    public function isPrivateOnly(): bool
     {
         return $this->private_only;
     }
@@ -336,7 +355,7 @@ abstract class Command
      *
      * @return bool
      */
-    public function isSystemCommand()
+    public function isSystemCommand(): bool
     {
         return ($this instanceof SystemCommand);
     }
@@ -346,7 +365,7 @@ abstract class Command
      *
      * @return bool
      */
-    public function isAdminCommand()
+    public function isAdminCommand(): bool
     {
         return ($this instanceof AdminCommand);
     }
@@ -356,7 +375,7 @@ abstract class Command
      *
      * @return bool
      */
-    public function isUserCommand()
+    public function isUserCommand(): bool
     {
         return ($this instanceof UserCommand);
     }
@@ -366,7 +385,7 @@ abstract class Command
      *
      * @return bool
      */
-    protected function removeNonPrivateMessage()
+    protected function removeNonPrivateMessage(): bool
     {
         $message = $this->getMessage() ?: $this->getEditedMessage();
 
@@ -393,9 +412,10 @@ abstract class Command
      * @param string $text
      * @param array  $data
      *
-     * @return \Longman\TelegramBot\Entities\ServerResponse
+     * @return ServerResponse
+     * @throws TelegramException
      */
-    public function replyToChat($text, array $data = [])
+    public function replyToChat(string $text, array $data = []): ServerResponse
     {
         if ($message = $this->getMessage() ?: $this->getEditedMessage() ?: $this->getChannelPost() ?: $this->getEditedChannelPost()) {
             return Request::sendMessage(array_merge([
@@ -413,9 +433,10 @@ abstract class Command
      * @param string $text
      * @param array  $data
      *
-     * @return \Longman\TelegramBot\Entities\ServerResponse
+     * @return ServerResponse
+     * @throws TelegramException
      */
-    public function replyToUser($text, array $data = [])
+    public function replyToUser(string $text, array $data = []): ServerResponse
     {
         if ($message = $this->getMessage() ?: $this->getEditedMessage()) {
             return Request::sendMessage(array_merge([
