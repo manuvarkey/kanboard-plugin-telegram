@@ -220,7 +220,7 @@ class Telegram extends Base implements NotificationInterface
                     $data_file = [
                         'chat_id' => $chat_id,
                         'photo'   => Request::encodeFile($attachment),
-                        'caption' => '📎 ' . $file_name,
+                        'caption' => '🖼️ ' . $file_name,
                     ];
                     $result_att = Request::sendPhoto($data_file);
                 }
@@ -230,7 +230,7 @@ class Telegram extends Base implements NotificationInterface
                     $data_file = [
                         'chat_id'  => $chat_id,
                         'document' => Request::encodeFile($attachment),
-                        'caption' => '📎 ' . $file_name,
+                        'caption' => '📁 ' . $file_name,
                     ];
                     $result_att = Request::sendDocument($data_file);
                 }
