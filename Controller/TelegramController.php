@@ -1,4 +1,5 @@
 <?php
+
 namespace Kanboard\Plugin\Telegram\Controller;
 
 use Kanboard\Controller\BaseController;
@@ -18,13 +19,16 @@ class TelegramController extends BaseController
         $apikey = $this->userMetadataModel->get($user['id'], 'telegram_apikey', $this->configModel->get('telegram_apikey'));
         $bot_username = $this->userMetadataModel->get($user['id'], 'telegram_username', $this->configModel->get('telegram_username'));
         $telegram_proxy = $this->userMetadataModel->get($user['id'], 'telegram_proxy', $this->configModel->get('telegram_proxy'));
-        
+
         // Preventing "A non-numeric value encountered in /var/www/app/plugins/Telegram/Controller/TelegramController.php"
-        try {
-                $offset = 0 + (int)$this->userMetadataModel->get($user['id'], 'telegram_offset', $this->configModel->get('telegram_offset'));
-        } catch (Exception $e) {
-                $offset=0;
-        }  
+        try
+        {
+            $offset = 0 + (int)$this->userMetadataModel->get($user['id'], 'telegram_offset', $this->configModel->get('telegram_offset'));
+        }
+        catch (Exception $e)
+        {
+            $offset = 0;
+        }
         $private_message = mb_substr(urldecode($this->request->getStringParam('private_message')), 0, 32);
 
         list($offset, $chat_id, $user_name) = $this->get_chat_id($apikey, $bot_username, $telegram_proxy, $offset, $private_message);
@@ -49,23 +53,26 @@ class TelegramController extends BaseController
         $apikey = $this->projectMetadataModel->get($project['id'], 'telegram_apikey', $this->configModel->get('telegram_apikey'));
         $bot_username = $this->projectMetadataModel->get($project['id'], 'telegram_username', $this->configModel->get('telegram_username'));
         $telegram_proxy = $this->userMetadataModel->get($project['id'], 'telegram_proxy', $this->configModel->get('telegram_proxy'));
-        
+
         // Preventing "A non-numeric value encountered in /var/www/app/plugins/Telegram/Controller/TelegramController.php"
-        try {
-		    $offset = 0 + (int)$this->projectMetadataModel->get($project['id'], 'telegram_offset', $this->configModel->get('telegram_offset'));
-	    } catch (Exception $e) {
-                $offset=0;
-        }  
+        try
+        {
+            $offset = 0 + (int)$this->projectMetadataModel->get($project['id'], 'telegram_offset', $this->configModel->get('telegram_offset'));
+        }
+        catch (Exception $e)
+        {
+            $offset = 0;
+        }
 
         $private_message = mb_substr(urldecode($this->request->getStringParam('private_message')), 0, 32);
 
-        list($offset, $chat_id, $user_name) = $this->get_chat_id($apikey, $bot_username, $telegram_proxy, $offset, $private_message);
+        list($offset, $chat_id, $user_name, $is_topic_message, $message_thread_id) = $this->get_chat_id($apikey, $bot_username, $telegram_proxy, $offset, $private_message);
 
         if ($offset != 0)
         {
             //ok
             $this->projectMetadataModel->save($project['id'], array('telegram_offset' => $offset));
-            $this->response->html($this->template->render('telegram:project/save_chat_id', array('chat_id' => $chat_id, 'user_name' => $user_name, 'private_message' => $private_message, 'bot_url' => "https://t.me/" . $bot_username, 'project' => $project)));
+            $this->response->html($this->template->render('telegram:project/save_chat_id', array('chat_id' => $chat_id, 'user_name' => $user_name, 'private_message' => $private_message, 'bot_url' => "https://t.me/" . $bot_username, 'project' => $project,  'is_topic_message' => $is_topic_message, 'message_thread_id' => $message_thread_id)));
         }
         else
         {
@@ -85,29 +92,31 @@ class TelegramController extends BaseController
 
             // Create Telegram API object
             $telegram = new TelegramClass($apikey, $bot_username);
-            
+
             // Setup proxy details if set in kanboard configuration
             if ($telegram_proxy != '')
-	        {
+            {
                 Request::setClient(new \GuzzleHttp\Client([
-	                    'base_uri' => 'https://api.telegram.org',
-                        'timeout' => 20,
-                        'verify' => false,
-                        'proxy'   => $telegram_proxy,
+                    'base_uri' => 'https://api.telegram.org',
+                    'timeout' => 20,
+                    'verify' => false,
+                    'proxy'   => $telegram_proxy,
                 ]));
             }
 
             $limit = 100;
             $timeout = 20;
-            $response = Request::getUpdates(['offset' => $offset + 1, 'limit' => $limit, 'timeout' => $timeout, ]);
+            $response = Request::getUpdates(['offset' => $offset + 1, 'limit' => $limit, 'timeout' => $timeout,]);
 
             $chat_id = "";
             $user_name = "";
+            $is_topic_message = false;
+            $message_thread_id = 0;
 
             if ($response->isOk())
             {
                 //Process all updates
-                
+
                 /** @var Update $result */
                 foreach ((array)$response->getResult() as $result)
                 {
@@ -118,6 +127,8 @@ class TelegramController extends BaseController
                         {
                             $chat_id = $result->getMessage()->getChat()->getId();
                             $user_name = $result->getMessage()->getChat()->getFirstName();
+                            $is_topic_message = $result->getMessage()->getIsTopicMessage();
+                            $message_thread_id = $result->getMessage()->getMessageThreadId();
                             break;
                         }
                     }
@@ -128,16 +139,15 @@ class TelegramController extends BaseController
                 throw new TelegramException($response->printError(true));
             }
         }
-        catch(TelegramException $e)
+        catch (TelegramException $e)
         {
             // log telegram errors
             error_log($e->getMessage());
             $this->flash->failure(t('Telegram error: ') . $e->getMessage());
             return 0; //$this->response->redirect($this->helper->url->to('UserViewController', 'integrations', array('user_id' => $user['id'] )), true);
-            
         }
 
-        return array($offset, $chat_id, $user_name);
+        return array($offset, $chat_id, $user_name, $is_topic_message, $message_thread_id);
     }
 
     public function save_user_chat_id()
@@ -164,9 +174,20 @@ class TelegramController extends BaseController
         $this->checkCSRFParam();
 
         $chat_id = urldecode($this->request->getStringParam('chat_id'));
+        $is_topic_message = urldecode($this->request->getStringParam('is_topic_message'));
+        $message_thread_id = urldecode($this->request->getStringParam('message_thread_id'));
         if (is_numeric($chat_id))
         {
             $this->projectMetadataModel->save($project['id'], array('telegram_group_cid' => $chat_id));
+            $this->projectMetadataModel->save($project['id'], array('telegram_group_topic' => $is_topic_message));
+            if ($is_topic_message)
+            {
+                $this->projectMetadataModel->save($project['id'], array('telegram_group_msg_tid' => $message_thread_id));
+            }
+            else
+            {
+                $this->projectMetadataModel->save($project['id'], array('telegram_group_msg_tid' => 0));
+            }
             $this->flash->success(t("Chat id was updated to %s", $chat_id));
         }
         else

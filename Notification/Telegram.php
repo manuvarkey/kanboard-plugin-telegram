@@ -80,12 +80,14 @@ class Telegram extends Base implements NotificationInterface
         $apikey = $this->projectMetadataModel->get($project['id'], 'telegram_apikey', $this->configModel->get('telegram_apikey'));
         $bot_username = $this->projectMetadataModel->get($project['id'], 'telegram_username', $this->configModel->get('telegram_username'));
         $chat_id = $this->projectMetadataModel->get($project['id'], 'telegram_group_cid');
+        $is_topic = $this->projectMetadataModel->get($project['id'], 'telegram_group_topic') ? true : false;
+        $message_thread_id = $this->projectMetadataModel->get($project['id'], 'telegram_group_msg_tid');
         $forward_attachments = $this->userMetadataModel->get($project['id'], 'forward_attachments', $this->configModel->get('forward_attachments'));
         $telegram_proxy = $this->userMetadataModel->get($project['id'], 'telegram_proxy', $this->configModel->get('telegram_proxy'));
 
         if (!empty($apikey))
         {
-            $this->sendMessage($apikey, $bot_username, $forward_attachments, $telegram_proxy, $chat_id, $project, $eventName, $eventData);
+            $this->sendMessage($apikey, $bot_username, $forward_attachments, $telegram_proxy, $chat_id, $project, $eventName, $eventData, $is_topic, $message_thread_id);
         }
     }
 
@@ -100,7 +102,7 @@ class Telegram extends Base implements NotificationInterface
      * @param  string    $eventName
      * @param  array     $eventData
      */
-    protected function sendMessage($apikey, $bot_username, $forward_attachments, $telegram_proxy, $chat_id, array $project, $eventName, array $eventData)
+    protected function sendMessage($apikey, $bot_username, $forward_attachments, $telegram_proxy, $chat_id, array $project, $eventName, array $eventData, $is_topic = false, $message_thread_id = 0)
     {
 
         // Get required data
@@ -205,8 +207,15 @@ class Telegram extends Base implements NotificationInterface
                 ]));
             }
 
-            // Message pay load
-            $data = array('chat_id' => $chat_id, 'text' => $message, 'parse_mode' => 'HTML');
+            // Message payload
+            if ($is_topic)
+            {
+                $data = array('chat_id' => $chat_id, 'text' => $message, 'parse_mode' => 'HTML', 'message_thread_id' => $message_thread_id);
+            }
+            else
+            {
+                $data = array('chat_id' => $chat_id, 'text' => $message, 'parse_mode' => 'HTML');
+            }
 
             // Send message
             $result = Request::sendMessage($data);
