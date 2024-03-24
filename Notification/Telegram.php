@@ -294,6 +294,7 @@ class Telegram extends Base implements NotificationInterface
         }
 
         $have_chat_id = $this->userMetadataModel->exists($user['id'], 'telegram_user_cid');
+        $have_chat_id = $have_chat_id ? $this->userMetadataModel->get($user['id'], 'telegram_user_cid') : false;
         $name = $user['name'] ?: '@' . $user['username'];
 
         if ($have_chat_id)
