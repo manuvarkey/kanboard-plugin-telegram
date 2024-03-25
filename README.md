@@ -32,6 +32,13 @@ Configuration
 
 Start a conversation with [BotFather](https://telegram.me/botfather) and follow the [guide](https://core.telegram.org/bots#6-botfather) to create a Telegram Bot.
 
+Following Bot configuration should be set for proper functionality.
+
+1. Bot Settings -> Allow Groups -> On
+2. Bot Settings -> Group Admin Rights -> Manage Topics -> On
+3. Bot Settings -> Group Admin Rights -> Manage Chat -> On
+4. Bot Settings -> Group Privacy -> Off
+
 ### Telegram Bot Settings
 
 Go to **Settings > Integrations > Telegram** and fill the form:
